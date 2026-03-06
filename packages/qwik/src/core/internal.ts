@@ -74,3 +74,9 @@ export { _captures } from './shared/qrl/qrl-class';
 export { _rsc } from './use/use-resource';
 export type { AsyncSignalOptions } from './reactive-primitives/types';
 export { setEvent as _setEvent } from './ssr/ssr-events';
+export {
+  _addProjection,
+  _slotReady,
+  _updateProjectionProps,
+  _removeProjection,
+} from './shared/projection/external-projection';
