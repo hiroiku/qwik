@@ -1,13 +1,42 @@
 import {
-  $,
   component$,
   createSignal,
   untrack,
+  useAsync$,
   useSignal,
   type QRL,
   type Signal,
 } from "@qwik.dev/core";
-import type { _ElementVNode } from "@qwik.dev/core/internal";
+import type {
+  _ElementVNode,
+  JSXNode,
+  JSXOutput,
+} from "@qwik.dev/core/internal";
+
+export interface EachProps<T> {
+  items: T[];
+  item$: QRL<(item: T) => JSXOutput>;
+}
+
+/** @public */
+export const Each = component$<EachProps<any>>((props) => {
+  const items = useAsync$(async ({ track }) => {
+    const items = track(() => props.items);
+    const itemFunction = await props.item$.resolve();
+    const result = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const jsx = itemFunction(item);
+      const key = (jsx as JSXNode).key;
+      if (i === 0 && (key === undefined || key === null)) {
+        throw new Error(`Each item must have a key, but got ${key}`);
+      }
+      result.push(jsx);
+    }
+    return result;
+  });
+  return items.value;
+});
 
 const adjectives = ["pretty", "large", "big", "small", "tall", "short", "long", "handsome", "plain", "quaint", "clean", "elegant", "easy", "angry", "crazy", "helpful", "mushy", "odd", "unsightly", "adorable", "important", "inexpensive", "cheap", "expensive", "fancy"]; // prettier-ignore
 const colors = ["red", "yellow", "blue", "green", "pink", "brown", "purple", "brown", "white", "black", "orange"]; // prettier-ignore
@@ -23,17 +52,17 @@ type Row = {
   selected: Signal<boolean>;
 };
 
-const buildData = (count: number): Signal<Row>[] => {
+const buildData = (count: number): Row[] => {
   const data = new Array(count);
   for (let i = 0; i < count; i++) {
     const label = createSignal(
       `${adjectives[random(adjectives.length)]} ${colors[random(colors.length)]} ${nouns[random(nouns.length)]}`,
     );
-    data[i] = createSignal({
+    data[i] = {
       id: nextId++,
       label,
       selected: createSignal(false),
-    });
+    };
   }
   return data;
 };
@@ -60,7 +89,7 @@ const Button = component$<ButtonProps>(({ id, text, click$ }) => {
 });
 
 export default component$(() => {
-  const data = useSignal<Signal<Row>[]>([]);
+  const data = useSignal<Row[]>([]);
   const selectedItem = useSignal<Row | null>(null);
 
   return (
@@ -99,7 +128,7 @@ export default component$(() => {
                     i < len;
                     i += 10
                   ) {
-                    d[i].value.label.value += " !!!";
+                    d[i].label.value += " !!!";
                   }
                 }}
               />
@@ -112,11 +141,12 @@ export default component$(() => {
                 id="swaprows"
                 text="Swap Rows"
                 click$={() => {
-                  const list = data.value;
+                  const list = data.value.slice();
                   if (list.length > 998) {
-                    const item = list[1].value;
-                    list[1].value = list[998].value;
-                    list[998].value = item;
+                    const item = list[1];
+                    list[1] = list[998];
+                    list[998] = item;
+                    data.value = list;
                   }
                 }}
               />
@@ -126,24 +156,25 @@ export default component$(() => {
       </div>
       <table class="table table-hover table-striped test-data">
         <tbody>
-          {data.value.map((row) => {
-            return (
+          <Each
+            items={data.value}
+            item$={(row) => (
               <tr
-                key={untrack(() => row.value.id + "")}
-                class={row.value.selected.value ? "danger" : ""}
+                key={untrack(() => row.id + "")}
+                class={row.selected.value ? "danger" : ""}
               >
-                <td class="col-md-1">{row.value.id}</td>
+                <td class="col-md-1">{row.id}</td>
                 <td class="col-md-4">
                   <a
                     onClick$={() => {
                       if (selectedItem.value) {
                         selectedItem.value.selected.value = false;
                       }
-                      selectedItem.value = row.value;
-                      row.value.selected.value = true;
+                      selectedItem.value = row;
+                      row.selected.value = true;
                     }}
                   >
-                    {row.value.label.value}
+                    {row.label.value}
                   </a>
                 </td>
                 <td class="col-md-1">
@@ -151,7 +182,7 @@ export default component$(() => {
                     onClick$={() => {
                       const dataValue = untrack(() => data.value);
                       data.value = dataValue.toSpliced(
-                        dataValue.findIndex((d) => d.value.id === row.value.id),
+                        dataValue.findIndex((d) => d.id === row.id),
                         1,
                       );
                     }}
@@ -163,8 +194,8 @@ export default component$(() => {
                 </td>
                 <td class="col-md-6" />
               </tr>
-            );
-          })}
+            )}
+          />
         </tbody>
       </table>
       <span class="preloadicon glyphicon glyphicon-remove" aria-hidden="true" />

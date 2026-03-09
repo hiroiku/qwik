@@ -31,6 +31,9 @@ import { SignalFlags } from '../../reactive-primitives/types';
 import { cleanupDestroyable } from '../../use/utils/destroyable';
 import type { ISsrNode } from '../../ssr/ssr-types';
 import type { Cursor } from './cursor';
+import { reconcileKeyedLoopToParent } from '../../client/reconcile-keyed-loop';
+import { _getProps } from '../jsx/props-proxy';
+import type { EachProps } from '../../control-flow/each';
 
 /**
  * Executes tasks for a vNode if the TASKS dirty bit is set. Tasks are stored in the ELEMENT_SEQ
@@ -122,6 +125,8 @@ export function executeNodeDiff(
   if (!jsx) {
     return;
   }
+  // cleanup payload
+  setNodeDiffPayload(vNode, null);
   if (isSignal(jsx)) {
     jsx = jsx.value as any;
   }
@@ -347,4 +352,38 @@ export function executeCompute(
       }
     }
   );
+}
+
+/**
+ * Executes a reconcile chore for a vNode if the RECONCILE dirty bit is set. This handles the
+ * reconciliation of a keyed loop.
+ *
+ * @param container - The container
+ * @param journal - The journal
+ * @param vNode - The vNode
+ * @returns Promise if reconcile is async, void otherwise
+ */
+export async function executeReconcile(
+  vNode: VNode,
+  container: Container,
+  journal: VNodeJournal
+): Promise<void> {
+  vNode.dirty &= ~ChoreBits.RECONCILE;
+  const host = vNode as ElementVNode;
+  const props = container.getHostProp<Props | null>(host, ELEMENT_PROPS) || null;
+  if (!props) {
+    return;
+  }
+  const items = _getProps(props, 'items' satisfies keyof EachProps<any>) as any[];
+  const keyOf = (await (
+    _getProps(props, 'key$' satisfies keyof EachProps<any>) as QRLInternal<
+      (item: any, index: number) => string
+    >
+  ).resolve()) as (item: any, index: number) => string;
+  const itemFn = (await (
+    _getProps(props, 'item$' satisfies keyof EachProps<any>) as QRLInternal<
+      (item: any) => JSXOutput
+    >
+  ).resolve()) as (item: any) => JSXOutput;
+  reconcileKeyedLoopToParent(container, journal, host, items, keyOf, itemFn);
 }
