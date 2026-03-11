@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { component$, Fragment, Fragment as Component, useSignal } from '@qwik.dev/core';
 import { Each } from '../control-flow/each';
 
-const debug = true; //true;
+const debug = false; //true;
 Error.stackTraceLimit = 100;
 
 describe.each([
-  // { render: ssrRenderToDom }, //
+  { render: ssrRenderToDom }, //
   { render: domRender }, //
 ])('$render.name: loops', ({ render }) => {
-  it.only('should render each item', async () => {
+  it('should render each item', async () => {
     const Cmp = component$(() => {
       return (
         <div id="loop">
@@ -61,19 +61,13 @@ describe.each([
     });
     const { vNode, document } = await render(<Cmp />, { debug });
     expect(vNode).toMatchVDOM(
-      <Component ssr-required>
+      <Component>
         <Fragment>
           <div id="loop">
             <Component ssr-required>
-              <Fragment ssr-required>
-                <div>Hello a</div>
-              </Fragment>
-              <Fragment ssr-required>
-                <div>Hello b</div>
-              </Fragment>
-              <Fragment ssr-required>
-                <div>Hello c</div>
-              </Fragment>
+              <div>Hello a</div>
+              <div>Hello b</div>
+              <div>Hello c</div>
             </Component>
           </div>
           <button>Update</button>
@@ -89,19 +83,13 @@ describe.each([
     );
     await trigger(document.body, 'button', 'click');
     expect(vNode).toMatchVDOM(
-      <Component ssr-required>
+      <Component>
         <Fragment>
           <div id="loop">
             <Component ssr-required>
-              <Fragment ssr-required>
-                <div>Hello d</div>
-              </Fragment>
-              <Fragment ssr-required>
-                <div>Hello e</div>
-              </Fragment>
-              <Fragment ssr-required>
-                <div>Hello f</div>
-              </Fragment>
+              <div>Hello d</div>
+              <div>Hello e</div>
+              <div>Hello f</div>
             </Component>
           </div>
           <button>Update</button>
@@ -115,5 +103,79 @@ describe.each([
         <div>Hello f</div>
       </div>
     );
+  });
+
+  it('should swap items without re-rendering the rest', async () => {
+    (globalThis as any).testCount = 0;
+    const Cmp = component$(() => {
+      const items = useSignal(['a', 'b', 'c']);
+      return (
+        <>
+          <div id="loop">
+            <Each
+              items={items.value}
+              key$={(item) => item}
+              item$={(item) => {
+                (globalThis as any).testCount++;
+                return <div>Hello {item}</div>;
+              }}
+            />
+          </div>
+          <button
+            onClick$={() => {
+              items.value = ['c', 'b', 'a'];
+            }}
+          >
+            Update
+          </button>
+        </>
+      );
+    });
+
+    const { vNode, document } = await render(<Cmp />, { debug });
+    expect(vNode).toMatchVDOM(
+      <Component>
+        <Fragment>
+          <div id="loop">
+            <Component ssr-required>
+              <div>Hello a</div>
+              <div>Hello b</div>
+              <div>Hello c</div>
+            </Component>
+          </div>
+          <button>Update</button>
+        </Fragment>
+      </Component>
+    );
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+      </div>
+    );
+    await trigger(document.body, 'button', 'click');
+    expect(vNode).toMatchVDOM(
+      <Component>
+        <Fragment>
+          <div id="loop">
+            <Component ssr-required>
+              <div>Hello c</div>
+              <div>Hello b</div>
+              <div>Hello a</div>
+            </Component>
+          </div>
+          <button>Update</button>
+        </Fragment>
+      </Component>
+    );
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello c</div>
+        <div>Hello b</div>
+        <div>Hello a</div>
+      </div>
+    );
+    expect((globalThis as any).testCount).toBe(3);
   });
 });

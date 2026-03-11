@@ -123,6 +123,8 @@ export interface DiffContext {
   /// NOTE: it can't be stored in `vCurrent` because `vNewNode` is in journal
   /// and is not connected to the tree.
   $vNewNode$: VNode | null;
+  $vEnd$: VNode | null;
+  $vEndParent$: ElementVNode | VirtualVNode | null;
   $vSiblings$: Map<string, VNode> | null;
   /// The array even indices will contains keys and odd indices the non keyed siblings.
   $vSiblingsArray$: Array<string | VNode | null> | null;
@@ -144,12 +146,25 @@ export interface DiffContext {
   };
 }
 
-/**
- * Helper to get the next sibling of a VNode. Extracted to module scope to help V8 inline it
- * reliably.
- */
 function peekNextSibling(vCurrent: VNode | null): VNode | null {
   return vCurrent ? (vCurrent.nextSibling as VNode | null) : null;
+}
+
+function getLevelBoundary(diffContext: DiffContext): VNode | null {
+  return diffContext.$vParent$ === diffContext.$vEndParent$ ? diffContext.$vEnd$ : null;
+}
+
+function getCurrentInsertBefore(diffContext: DiffContext): VNode | null {
+  return diffContext.$vCurrent$ || getLevelBoundary(diffContext);
+}
+
+function peekNextSiblingWithinBoundary(
+  diffContext: DiffContext,
+  vCurrent: VNode | null
+): VNode | null {
+  const nextSibling = peekNextSibling(vCurrent);
+  const boundary = getLevelBoundary(diffContext);
+  return nextSibling === boundary ? null : nextSibling;
 }
 
 const _hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -196,6 +211,8 @@ function createDiffContext(
     $vParent$: null!,
     $vCurrent$: null,
     $vNewNode$: null,
+    $vEnd$: null,
+    $vEndParent$: null,
     $vSiblings$: null,
     $vSiblingsArray$: null,
     $vSideBuffer$: null,
@@ -227,9 +244,35 @@ export const vnode_diff = (
   scopedStyleIdPrefix: string | null
 ) => {
   const diffContext = createDiffContext(container, journal, cursor, scopedStyleIdPrefix);
-  ////////////////////////////////
+  return runDiff(diffContext, jsxNode, vStartNode);
+};
 
-  diff(diffContext, jsxNode, vStartNode);
+export const vnode_diff_single = (
+  container: ClientContainer,
+  journal: VNodeJournal,
+  jsxNode: JSXChildren,
+  vParent: ElementVNode | VirtualVNode,
+  vCurrent: VNode | null,
+  vEnd: VNode | null,
+  cursor: Cursor,
+  scopedStyleIdPrefix: string | null
+) => {
+  const diffContext = createDiffContext(container, journal, cursor, scopedStyleIdPrefix);
+  return runDiff(diffContext, jsxNode, vParent, vCurrent, vEnd);
+};
+
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
+function runDiff(
+  diffContext: DiffContext,
+  jsxNode: JSXChildren,
+  vStartNode: VNode,
+  vCurrent: VNode | null = vnode_getFirstChild(vStartNode),
+  vEnd: VNode | null = null
+) {
+  diff(diffContext, jsxNode, vStartNode, vCurrent, vEnd);
   const result = drainAsyncQueue(diffContext);
 
   // Cleanup diffContext after completion
@@ -240,18 +283,22 @@ export const vnode_diff = (
   } else {
     cleanupDiffContext(diffContext);
   }
-};
+}
 
-//////////////////////////////////////////////
-//////////////////////////////////////////////
-//////////////////////////////////////////////
-
-function diff(diffContext: DiffContext, jsxNode: JSXChildren, vStartNode: VNode) {
+function diff(
+  diffContext: DiffContext,
+  jsxNode: JSXChildren,
+  vStartNode: VNode,
+  vCurrent: VNode | null = vnode_getFirstChild(vStartNode),
+  vEnd: VNode | null = null
+) {
   isDev && assertFalse(vnode_isVNode(jsxNode), 'JSXNode should not be a VNode');
   isDev && assertTrue(vnode_isVNode(vStartNode), 'vStartNode should be a VNode');
   diffContext.$vParent$ = vStartNode as ElementVNode | VirtualVNode;
   diffContext.$vNewNode$ = null;
-  diffContext.$vCurrent$ = vnode_getFirstChild(vStartNode);
+  diffContext.$vCurrent$ = vCurrent;
+  diffContext.$vEnd$ = vEnd;
+  diffContext.$vEndParent$ = vStartNode as ElementVNode | VirtualVNode;
   stackPush(diffContext, jsxNode, true);
 
   if (diffContext.$vParent$.flags & VNodeFlags.Deleted) {
@@ -407,7 +454,7 @@ function advance(diffContext: DiffContext) {
     // vNewNode  and try again.
     diffContext.$vNewNode$ = null;
   } else {
-    diffContext.$vCurrent$ = peekNextSibling(diffContext.$vCurrent$);
+    diffContext.$vCurrent$ = peekNextSiblingWithinBoundary(diffContext, diffContext.$vCurrent$);
   }
 }
 
@@ -526,10 +573,12 @@ function stackPush(diffContext: DiffContext, children: JSXChildren, descendVNode
 
 function getInsertBefore(diffContext: DiffContext) {
   if (diffContext.$vNewNode$) {
-    return diffContext.$vCurrent$;
-  } else {
-    return peekNextSibling(diffContext.$vCurrent$);
+    return getCurrentInsertBefore(diffContext);
   }
+  return (
+    peekNextSiblingWithinBoundary(diffContext, diffContext.$vCurrent$) ||
+    getLevelBoundary(diffContext)
+  );
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -645,7 +694,7 @@ function expectSlot(diffContext: DiffContext) {
       diffContext.$journal$,
       diffContext.$vParent$ as ElementVNode | VirtualVNode,
       diffContext.$vNewNode$,
-      diffContext.$vCurrent$ && getInsertBefore(diffContext)
+      getInsertBefore(diffContext)
     );
     return false;
   } else if (vProjectedNode === diffContext.$vCurrent$) {
@@ -666,7 +715,7 @@ function expectSlot(diffContext: DiffContext) {
       diffContext.$journal$,
       diffContext.$vParent$ as ElementVNode | VirtualVNode,
       diffContext.$vNewNode$,
-      diffContext.$vCurrent$ && getInsertBefore(diffContext)
+      getInsertBefore(diffContext)
     );
 
     // If we moved from a q:template and it's now empty, remove it
@@ -773,15 +822,16 @@ function expectNoChildren(diffContext: DiffContext, removeDOM = true) {
 
 /** Expect no more nodes - Any nodes which are still at cursor, need to be removed. */
 function expectNoMore(diffContext: DiffContext) {
+  const boundary = getLevelBoundary(diffContext);
   isDev &&
     assertFalse(
       diffContext.$vParent$ === diffContext.$vCurrent$,
       "Parent and current can't be the same"
     );
-  if (diffContext.$vCurrent$ !== null) {
-    while (diffContext.$vCurrent$) {
+  if (diffContext.$vCurrent$ !== null && diffContext.$vCurrent$ !== boundary) {
+    while (diffContext.$vCurrent$ && diffContext.$vCurrent$ !== boundary) {
       const toRemove = diffContext.$vCurrent$;
-      diffContext.$vCurrent$ = peekNextSibling(diffContext.$vCurrent$);
+      diffContext.$vCurrent$ = peekNextSiblingWithinBoundary(diffContext, diffContext.$vCurrent$);
       if (diffContext.$vParent$ === toRemove.parent) {
         cleanup(diffContext.$container$, diffContext.$journal$, toRemove, diffContext.$cursor$);
         // If we are diffing projection than the parent is not the parent of the node.
@@ -795,7 +845,7 @@ function expectNoMore(diffContext: DiffContext) {
 function expectNoTextNode(diffContext: DiffContext) {
   if (diffContext.$vCurrent$ !== null && vnode_isTextVNode(diffContext.$vCurrent$)) {
     const toRemove = diffContext.$vCurrent$;
-    diffContext.$vCurrent$ = peekNextSibling(diffContext.$vCurrent$);
+    diffContext.$vCurrent$ = peekNextSiblingWithinBoundary(diffContext, diffContext.$vCurrent$);
     vnode_remove(diffContext.$journal$, diffContext.$vParent$, toRemove, true);
   }
 }
@@ -914,7 +964,7 @@ function createNewElement(
     diffContext.$journal$,
     diffContext.$vParent$ as ElementVNode,
     diffContext.$vNewNode$ as ElementVNode,
-    diffContext.$vCurrent$
+    getCurrentInsertBefore(diffContext)
   );
 }
 
@@ -1184,8 +1234,9 @@ function retrieveChildWithKey(
     // it is not materialized; so materialize it.
     diffContext.$vSiblings$ = new Map<string, VNode>();
     diffContext.$vSiblingsArray$ = [];
+    const boundary = getLevelBoundary(diffContext);
     let vNode = diffContext.$vCurrent$;
-    while (vNode) {
+    while (vNode && vNode !== boundary) {
       const name = vnode_isElementVNode(vNode) ? vnode_getElementName(vNode) : null;
       const vKey =
         getKey(vNode as VirtualVNode | ElementVNode | TextVNode | null) ||
@@ -1247,8 +1298,9 @@ function collectSideBufferSiblings(diffContext: DiffContext, targetNode: VNode |
   }
 
   // Walk from vCurrent up to the target node and collect all keyed siblings
+  const boundary = getLevelBoundary(diffContext);
   let vNode = diffContext.$vCurrent$;
-  while (vNode && vNode !== targetNode) {
+  while (vNode && vNode !== targetNode && vNode !== boundary) {
     const name = vnode_isElementVNode(vNode) ? vnode_getElementName(vNode) : null;
     const vKey =
       getKey(vNode as VirtualVNode | ElementVNode | TextVNode | null) ||
@@ -1315,7 +1367,7 @@ function moveOrCreateKeyedNode(
         diffContext.$journal$,
         parentForInsert as ElementVNode | VirtualVNode,
         diffContext.$vNewNode$,
-        diffContext.$vCurrent$
+        getCurrentInsertBefore(diffContext)
       );
     }
     diffContext.$vCurrent$ = diffContext.$vNewNode$;
@@ -1349,7 +1401,7 @@ function moveOrCreateKeyedNode(
           diffContext.$journal$,
           parentForInsert as ElementVNode | VirtualVNode,
           buffered,
-          diffContext.$vCurrent$
+          getCurrentInsertBefore(diffContext)
         );
       }
       diffContext.$vCurrent$ = buffered;
@@ -1382,7 +1434,7 @@ function expectVirtual(diffContext: DiffContext, type: VirtualType, jsxKey: stri
       diffContext.$journal$,
       diffContext.$vParent$ as VirtualVNode,
       (diffContext.$vNewNode$ = vnode_newVirtual()),
-      diffContext.$vCurrent$ && getInsertBefore(diffContext)
+      getInsertBefore(diffContext)
     );
     (diffContext.$vNewNode$ as VirtualVNode).key = jsxKey;
     isDev && vnode_setProp(diffContext.$vNewNode$ as VirtualVNode, DEBUG_TYPE, type);
@@ -1402,7 +1454,7 @@ function expectVirtual(diffContext: DiffContext, type: VirtualType, jsxKey: stri
       diffContext.$journal$,
       diffContext.$vParent$ as VirtualVNode,
       (diffContext.$vNewNode$ = vnode_newVirtual()),
-      diffContext.$vCurrent$ && getInsertBefore(diffContext)
+      getInsertBefore(diffContext)
     );
     (diffContext.$vNewNode$ as VirtualVNode).key = jsxKey;
     isDev && vnode_setProp(diffContext.$vNewNode$ as VirtualVNode, DEBUG_TYPE, type);
@@ -1551,7 +1603,7 @@ function insertNewComponent(
     diffContext.$journal$,
     diffContext.$vParent$ as VirtualVNode,
     (diffContext.$vNewNode$ = vnode_newVirtual()),
-    diffContext.$vCurrent$ && getInsertBefore(diffContext)
+    getInsertBefore(diffContext)
   );
   const jsxNode = diffContext.$jsxValue$ as JSXNodeInternal;
   isDev && vnode_setProp(diffContext.$vNewNode$ as VirtualVNode, DEBUG_TYPE, VirtualType.Component);
@@ -1565,7 +1617,7 @@ function insertNewInlineComponent(diffContext: DiffContext) {
     diffContext.$journal$,
     diffContext.$vParent$ as VirtualVNode,
     (diffContext.$vNewNode$ = vnode_newVirtual()),
-    diffContext.$vCurrent$ && getInsertBefore(diffContext)
+    getInsertBefore(diffContext)
   );
   const jsxNode = diffContext.$jsxValue$ as JSXNodeInternal;
   isDev &&
@@ -1594,7 +1646,7 @@ function expectText(diffContext: DiffContext, text: string) {
       (import.meta.env.TEST ? diffContext.$container$.document : document).createTextNode(text),
       text
     )),
-    diffContext.$vCurrent$
+    getCurrentInsertBefore(diffContext)
   );
 }
 

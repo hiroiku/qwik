@@ -170,7 +170,7 @@ export function walkCursor(cursor: Cursor, options: WalkOptions): void {
       } else if (currentVNode.dirty & ChoreBits.COMPONENT) {
         result = executeComponentChore(currentVNode, container, journal, cursor);
       } else if (currentVNode.dirty & ChoreBits.RECONCILE) {
-        result = executeReconcile(currentVNode, container, journal);
+        result = executeReconcile(currentVNode, container, journal, cursor);
       } else if (currentVNode.dirty & ChoreBits.NODE_PROPS) {
         executeNodeProps(currentVNode, journal);
       } else if (currentVNode.dirty & ChoreBits.COMPUTE) {

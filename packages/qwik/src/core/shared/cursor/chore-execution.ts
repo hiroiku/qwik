@@ -366,7 +366,8 @@ export function executeCompute(
 export async function executeReconcile(
   vNode: VNode,
   container: Container,
-  journal: VNodeJournal
+  journal: VNodeJournal,
+  cursor: Cursor
 ): Promise<void> {
   vNode.dirty &= ~ChoreBits.RECONCILE;
   const host = vNode as ElementVNode;
@@ -388,5 +389,5 @@ export async function executeReconcile(
       (item: any) => JSXOutput
     >
   ).resolve()) as (item: any) => JSXOutput;
-  reconcileKeyedLoopToParent(container, journal, host, items, keyOf, itemFn);
+  reconcileKeyedLoopToParent(container, journal, host, cursor, items, keyOf, itemFn);
 }
