@@ -1168,7 +1168,7 @@ const vnode_findInsertBefore = (
   return adjustedInsertBefore;
 };
 
-const vnode_connectSiblings = (
+export const vnode_connectSiblings = (
   parent: ElementVNode | VirtualVNode,
   vNode: VNode,
   vNext: VNode | null

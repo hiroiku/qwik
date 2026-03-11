@@ -15,8 +15,9 @@ import { Fragment, type Props } from '../jsx/jsx-runtime';
 import type { EachProps } from '../../control-flow/each';
 import { _getProps } from '../jsx/props-proxy';
 import type { QRLInternal } from '../qrl/qrl-class';
-import type { JSXOutput } from '../jsx/types/jsx-node';
+import type { JSXNode, JSXOutput } from '../jsx/types/jsx-node';
 import { _jsxSorted } from '../../internal';
+import { untrack } from '../../use/use-core';
 
 /** @internal */
 export function _executeSsrChores(
@@ -129,25 +130,28 @@ export async function executeReconcileChore(
   if (!props) {
     return;
   }
-  const items = _getProps(props, 'items' satisfies keyof EachProps<any>) as any[];
+  let items = _getProps(props, 'items' satisfies keyof EachProps<any>) as any[];
+  if (isSignal(items)) {
+    items = untrack(items) as any[];
+  }
   const keyOf = (await (
     _getProps(props, 'key$' satisfies keyof EachProps<any>) as QRLInternal<
       (item: any, index: number) => string
     >
   ).resolve()) as (item: any, index: number) => string;
   const itemFn = (await (
-    _getProps(props, 'item$' satisfies keyof EachProps<any>) as QRLInternal<
-      (item: any) => JSXOutput
-    >
-  ).resolve()) as (item: any) => JSXOutput;
-  const children: JSXOutput[] = [];
+    _getProps(props, 'item$' satisfies keyof EachProps<any>) as QRLInternal<(item: any) => JSXNode>
+  ).resolve()) as (item: any) => JSXNode;
+  const children: JSXNode[] = [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const jsx = itemFn(item);
+    const jsx = itemFn(item)!;
     const key = keyOf(item, i);
-    const vnode = _jsxSorted(Fragment, null, null, jsx, 0, key);
-    children.push(vnode);
+    jsx.key = key;
+    // const child = _jsxSorted(Fragment, null, null, jsx, 0, key);
+    children.push(jsx);
   }
+  // container.serializationCtx.$addRoot$(ssrNode);
   await container.renderJSX(children, {
     currentStyleScoped: null,
     parentComponentFrame: container.getComponentFrame(0),

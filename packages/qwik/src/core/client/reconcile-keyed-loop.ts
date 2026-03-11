@@ -1,5 +1,6 @@
 import {
   type VNodeJournal,
+  vnode_connectSiblings,
   vnode_getFirstChild,
   vnode_insertBefore,
   vnode_newVirtual,
@@ -10,15 +11,16 @@ import type { ElementVNode } from '../shared/vnode/element-vnode';
 import type { VirtualVNode } from '../shared/vnode/virtual-vnode';
 import { markVNodeDirty } from '../shared/vnode/vnode-dirty';
 import { setNodeDiffPayload } from '../shared/cursor/chore-execution';
-import type { Container, JSXOutput } from '../../server/qwik-types';
+import type { Container } from '../../server/qwik-types';
 import { ChoreBits } from '../shared/vnode/enums/chore-bits.enum';
+import type { JSXNode } from '../shared/jsx/types/jsx-node';
 
 type Key = string;
 type KeyedRowVNode = ElementVNode | VirtualVNode;
 
-function convertJSXToVNode(container: Container, jsx: JSXOutput, key: Key): KeyedRowVNode {
+function convertJSXToVNode(container: Container, jsx: JSXNode, host: VirtualVNode): KeyedRowVNode {
   const parent = vnode_newVirtual();
-  parent.key = key;
+  vnode_connectSiblings(host, parent, null);
   setNodeDiffPayload(parent, jsx);
   markVNodeDirty(container, parent, ChoreBits.NODE_DIFF);
   return parent;
@@ -57,7 +59,7 @@ export function reconcileKeyedLoopToParent<T>(
   parent: ElementVNode | VirtualVNode,
   items: readonly T[],
   keyOf: (item: T, index: number) => Key,
-  renderItem: (item: T, index: number) => JSXOutput
+  renderItem: (item: T, index: number) => JSXNode
 ): void {
   const oldRows = collectCurrentKeyedChildren(parent);
   const oldByKey = new Map<Key, KeyedRowVNode>();
@@ -81,7 +83,7 @@ export function reconcileKeyedLoopToParent<T>(
       nextRows[i] = reused;
       oldByKey.delete(key);
     } else {
-      const created = convertJSXToVNode(container, renderItem(item, i), key);
+      const created = convertJSXToVNode(container, renderItem(item, i), parent);
       created.key = key;
       nextRows[i] = created;
     }

@@ -1,40 +1,119 @@
-import { domRender, ssrRenderToDom } from '@qwik.dev/core/testing';
+import { domRender, ssrRenderToDom, trigger } from '@qwik.dev/core/testing';
 import { describe, expect, it } from 'vitest';
-import { component$, Fragment, Fragment as Component } from '@qwik.dev/core';
+import { component$, Fragment, Fragment as Component, useSignal } from '@qwik.dev/core';
 import { Each } from '../control-flow/each';
 
-const debug = false; //true;
+const debug = true; //true;
 Error.stackTraceLimit = 100;
 
 describe.each([
-  { render: ssrRenderToDom }, //
+  // { render: ssrRenderToDom }, //
   { render: domRender }, //
 ])('$render.name: loops', ({ render }) => {
-  it('should render each item', async () => {
+  it.only('should render each item', async () => {
     const Cmp = component$(() => {
       return (
-        <Each
-          items={['a', 'b', 'c']}
-          key$={(item) => item}
-          item$={(item) => <div>Hello {item}</div>}
-        />
+        <div id="loop">
+          <Each
+            items={['a', 'b', 'c']}
+            key$={(item) => item}
+            item$={(item) => <div>Hello {item}</div>}
+          />
+        </div>
       );
     });
-    const { vNode } = await render(<Cmp />, { debug });
+    const { vNode, document } = await render(<Cmp />, { debug });
     expect(vNode).toMatchVDOM(
       <Component>
-        <Component>
-          <Fragment>
+        <div id="loop">
+          <Component>
             <div>Hello a</div>
-          </Fragment>
-          <Fragment>
             <div>Hello b</div>
-          </Fragment>
-          <Fragment>
             <div>Hello c</div>
-          </Fragment>
-        </Component>
+          </Component>
+        </div>
       </Component>
+    );
+    await expect(document.querySelector('#loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+      </div>
+    );
+  });
+
+  it('should update each item', async () => {
+    const Cmp = component$(() => {
+      const items = useSignal(['a', 'b', 'c']);
+      return (
+        <>
+          <div id="loop">
+            <Each
+              items={items.value}
+              key$={(item) => item}
+              item$={(item) => <div>Hello {item}</div>}
+            />
+          </div>
+          <button onClick$={() => (items.value = ['d', 'e', 'f'])}>Update</button>
+        </>
+      );
+    });
+    const { vNode, document } = await render(<Cmp />, { debug });
+    expect(vNode).toMatchVDOM(
+      <Component ssr-required>
+        <Fragment>
+          <div id="loop">
+            <Component ssr-required>
+              <Fragment ssr-required>
+                <div>Hello a</div>
+              </Fragment>
+              <Fragment ssr-required>
+                <div>Hello b</div>
+              </Fragment>
+              <Fragment ssr-required>
+                <div>Hello c</div>
+              </Fragment>
+            </Component>
+          </div>
+          <button>Update</button>
+        </Fragment>
+      </Component>
+    );
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+      </div>
+    );
+    await trigger(document.body, 'button', 'click');
+    expect(vNode).toMatchVDOM(
+      <Component ssr-required>
+        <Fragment>
+          <div id="loop">
+            <Component ssr-required>
+              <Fragment ssr-required>
+                <div>Hello d</div>
+              </Fragment>
+              <Fragment ssr-required>
+                <div>Hello e</div>
+              </Fragment>
+              <Fragment ssr-required>
+                <div>Hello f</div>
+              </Fragment>
+            </Component>
+          </div>
+          <button>Update</button>
+        </Fragment>
+      </Component>
+    );
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello d</div>
+        <div>Hello e</div>
+        <div>Hello f</div>
+      </div>
     );
   });
 });

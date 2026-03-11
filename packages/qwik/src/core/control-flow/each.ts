@@ -1,9 +1,10 @@
 import type { QRLInternal } from '../../server/qwik-types';
-import { component$, useTask$ } from '@qwik.dev/core';
+import { component$, isServer, SkipRender, useTask$ } from '@qwik.dev/core';
 import type { JSXOutput } from '../shared/jsx/types/jsx-node';
 import { tryGetInvokeContext } from '../use/use-core';
 import { markVNodeDirty } from '../shared/vnode/vnode-dirty';
 import { ChoreBits } from '../shared/vnode/enums/chore-bits.enum';
+import { isServerPlatform } from '../shared/platform/platform';
 
 export interface EachProps<T> {
   items: T[];
@@ -12,12 +13,17 @@ export interface EachProps<T> {
 }
 
 /** @public */
-export const Each = component$<EachProps<any>>(() => {
-  useTask$(() => {
+export const Each = component$<EachProps<any>>((props) => {
+  useTask$(async ({ track }) => {
+    track(() => props.items);
     const context = tryGetInvokeContext()!;
     const host = context.$hostElement$!;
     const container = context.$container$!;
     markVNodeDirty(container, host, ChoreBits.RECONCILE);
+    const isSsr = import.meta.env.TEST ? isServerPlatform() : isServer;
+    if (isSsr) {
+      await container.$renderPromise$;
+    }
   });
-  return null;
+  return SkipRender;
 });

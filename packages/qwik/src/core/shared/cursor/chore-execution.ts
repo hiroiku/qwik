@@ -25,7 +25,7 @@ import {
   NODE_PROPS_DATA_KEY,
   type CursorData,
 } from './cursor-props';
-import { invoke, newInvokeContext } from '../../use/use-core';
+import { invoke, newInvokeContext, untrack } from '../../use/use-core';
 import type { WrappedSignalImpl } from '../../reactive-primitives/impl/wrapped-signal-impl';
 import { SignalFlags } from '../../reactive-primitives/types';
 import { cleanupDestroyable } from '../../use/utils/destroyable';
@@ -374,7 +374,10 @@ export async function executeReconcile(
   if (!props) {
     return;
   }
-  const items = _getProps(props, 'items' satisfies keyof EachProps<any>) as any[];
+  let items = _getProps(props, 'items' satisfies keyof EachProps<any>) as any[];
+  if (isSignal(items)) {
+    items = untrack(items) as any[];
+  }
   const keyOf = (await (
     _getProps(props, 'key$' satisfies keyof EachProps<any>) as QRLInternal<
       (item: any, index: number) => string
