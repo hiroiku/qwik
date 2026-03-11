@@ -11,11 +11,11 @@ import type { NodeProp } from '../../reactive-primitives/subscription-data';
 import { isSignal, type Signal } from '../../reactive-primitives/signal.public';
 import { executeCompute } from './chore-execution';
 import { isPromise } from '../utils/promises';
-import { Fragment, type Props } from '../jsx/jsx-runtime';
+import { type Props } from '../jsx/jsx-runtime';
 import type { EachProps } from '../../control-flow/each';
 import { _getProps } from '../jsx/props-proxy';
 import type { QRLInternal } from '../qrl/qrl-class';
-import type { JSXNode, JSXOutput } from '../jsx/types/jsx-node';
+import type { JSXNode } from '../jsx/types/jsx-node';
 import { _jsxSorted } from '../../internal';
 import { untrack } from '../../use/use-core';
 

@@ -2,41 +2,11 @@ import {
   component$,
   createSignal,
   untrack,
-  useAsync$,
   useSignal,
+  Each,
   type QRL,
   type Signal,
 } from "@qwik.dev/core";
-import type {
-  _ElementVNode,
-  JSXNode,
-  JSXOutput,
-} from "@qwik.dev/core/internal";
-
-export interface EachProps<T> {
-  items: T[];
-  item$: QRL<(item: T) => JSXOutput>;
-}
-
-/** @public */
-export const Each = component$<EachProps<any>>((props) => {
-  const items = useAsync$(async ({ track }) => {
-    const items = track(() => props.items);
-    const itemFunction = await props.item$.resolve();
-    const result = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const jsx = itemFunction(item);
-      const key = (jsx as JSXNode).key;
-      if (i === 0 && (key === undefined || key === null)) {
-        throw new Error(`Each item must have a key, but got ${key}`);
-      }
-      result.push(jsx);
-    }
-    return result;
-  });
-  return items.value;
-});
 
 const adjectives = ["pretty", "large", "big", "small", "tall", "short", "long", "handsome", "plain", "quaint", "clean", "elegant", "easy", "angry", "crazy", "helpful", "mushy", "odd", "unsightly", "adorable", "important", "inexpensive", "cheap", "expensive", "fancy"]; // prettier-ignore
 const colors = ["red", "yellow", "blue", "green", "pink", "brown", "purple", "brown", "white", "black", "orange"]; // prettier-ignore
@@ -158,11 +128,9 @@ export default component$(() => {
         <tbody>
           <Each
             items={data.value}
-            item$={(row) => (
-              <tr
-                key={untrack(() => row.id + "")}
-                class={row.selected.value ? "danger" : ""}
-              >
+            key$={(row: Row) => row.id + ""}
+            item$={(row: Row) => (
+              <tr class={row.selected.value ? "danger" : ""}>
                 <td class="col-md-1">{row.id}</td>
                 <td class="col-md-4">
                   <a

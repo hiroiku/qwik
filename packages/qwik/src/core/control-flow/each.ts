@@ -1,10 +1,13 @@
 import type { QRLInternal } from '../../server/qwik-types';
-import { component$, isServer, SkipRender, useTask$ } from '@qwik.dev/core';
 import type { JSXOutput } from '../shared/jsx/types/jsx-node';
 import { tryGetInvokeContext } from '../use/use-core';
 import { markVNodeDirty } from '../shared/vnode/vnode-dirty';
 import { ChoreBits } from '../shared/vnode/enums/chore-bits.enum';
 import { isServerPlatform } from '../shared/platform/platform';
+import { component$ } from '../shared/component.public';
+import { useTask$ } from '../use/use-task-dollar';
+import { isServer } from '@qwik.dev/core/build';
+import { SkipRender } from '../shared/jsx/utils.public';
 
 export interface EachProps<T> {
   items: T[];
