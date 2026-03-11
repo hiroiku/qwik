@@ -76,7 +76,7 @@ export type { AsyncSignalOptions } from './reactive-primitives/types';
 export { setEvent as _setEvent } from './ssr/ssr-events';
 export {
   _addProjection,
-  _slotReady,
+  _setProjectionTarget,
   _updateProjectionProps,
   _removeProjection,
 } from './shared/projection/external-projection';

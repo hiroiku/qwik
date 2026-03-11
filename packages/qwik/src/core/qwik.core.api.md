@@ -994,6 +994,9 @@ export function _setEvent(serializationCtx: SerializationContext, key: string, r
 // @public
 export const setPlatform: (plt: CorePlatform) => CorePlatform;
 
+// @internal
+export function _setProjectionTarget(vnode: _VirtualVNode, targetElement: Element): void;
+
 // @internal (undocumented)
 export abstract class _SharedContainer implements _Container {
     // (undocumented)
@@ -1066,9 +1069,6 @@ export const Slot: FunctionComponent<{
     name?: string;
     children?: JSXChildren;
 }>;
-
-// @internal
-export function _slotReady(vnode: _VirtualVNode, targetElement: Element): void;
 
 // @public (undocumented)
 export interface SnapshotListener {
