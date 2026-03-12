@@ -152,6 +152,55 @@ describe.each([
     );
   });
 
+  it('should keep reused keyed rows unchanged when item content changes', async () => {
+    const Cmp = component$(() => {
+      const items = useSignal([
+        { id: 'a', label: 'Hello a' },
+        { id: 'b', label: 'Hello b' },
+        { id: 'c', label: 'Hello c' },
+      ]);
+      return (
+        <>
+          <div id="loop">
+            <Each
+              items={items.value}
+              key$={(item) => item.id}
+              item$={(item) => <div>{item.label}</div>}
+            />
+          </div>
+          <button
+            onClick$={() => {
+              items.value = [
+                { id: 'a', label: 'Hello a' },
+                { id: 'b', label: 'Updated b' },
+                { id: 'c', label: 'Hello c' },
+              ];
+            }}
+          >
+            Update
+          </button>
+        </>
+      );
+    });
+
+    const { document } = await render(<Cmp />, { debug });
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+      </div>
+    );
+    await trigger(document.body, 'button', 'click');
+    await expect(document.getElementById('loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+      </div>
+    );
+  });
+
   it('should swap items without re-rendering the rest', async () => {
     (globalThis as any).testCount = 0;
     const Cmp = component$(() => {

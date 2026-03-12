@@ -41,6 +41,67 @@ describe('reconcile-keyed-loop', () => {
     ).toEqual(nextItems);
   });
 
+  it('should append keyed rows without moving the existing prefix', async () => {
+    const initialItems = ['0', '1', '2'];
+    const nextItems = ['0', '1', '2', '3', '4'];
+    const { vNode, container } = vnode_fromJSX(
+      _jsxSorted('test', {}, null, initialItems.map(createRow), 0, 'KA_root')
+    );
+
+    const journal: VNodeJournal = [];
+    await reconcileKeyedLoopToParent(
+      container,
+      journal,
+      vNode as ElementVNode,
+      null as unknown as Cursor,
+      nextItems,
+      (item) => item,
+      (item) => createRow(item)
+    );
+
+    expect(vNode).toMatchVDOM(_jsxSorted('test', {}, null, nextItems.map(createRow), 0, 'KA_root'));
+
+    _flushJournal(journal);
+
+    expect(container.document.querySelectorAll('b')).toHaveLength(5);
+    expect(
+      Array.from(container.document.querySelectorAll('b')).map((node) => node.textContent)
+    ).toEqual(nextItems);
+  });
+
+  it('should not throw when moving keyed children inside a virtual parent', async () => {
+    const initialItems = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const nextItems = ['0', '8', '2', '3', '4', '5', '6', '7', '1', '9'];
+    const { vNode, container } = vnode_fromJSX(
+      _jsxSorted(
+        'table',
+        {},
+        null,
+        [_jsxSorted(Fragment, {}, null, initialItems.map(createRow), 0, null)],
+        0,
+        'KA_root'
+      )
+    );
+    const parent = (vNode as ElementVNode).firstChild as VirtualVNode;
+    const journal: VNodeJournal = [];
+
+    await reconcileKeyedLoopToParent(
+      container,
+      journal,
+      parent,
+      null as unknown as Cursor,
+      nextItems,
+      (item) => item,
+      (item) => createRow(item)
+    );
+
+    expect(() => _flushJournal(journal)).not.toThrow();
+    expect(container.document.querySelectorAll('b')).toHaveLength(10);
+    expect(
+      Array.from(container.document.querySelectorAll('b')).map((node) => node.textContent)
+    ).toEqual(nextItems);
+  });
+
   it('should remove keyed children inside a virtual parent with a single remove-all operation', async () => {
     const initialItems = ['0', '1', '2'];
     const { vNode, container } = vnode_fromJSX(

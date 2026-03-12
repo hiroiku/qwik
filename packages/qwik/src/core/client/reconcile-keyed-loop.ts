@@ -1,41 +1,39 @@
+import { isDev } from '@qwik.dev/core/build';
+import type { Container } from '../../server/qwik-types';
+import type { Cursor } from '../shared/cursor/cursor';
+import { isJSXNode } from '../shared/jsx/jsx-node';
+import type { JSXNode, JSXOutput } from '../shared/jsx/types/jsx-node';
+import type { ElementVNode } from '../shared/vnode/element-vnode';
+import type { VirtualVNode } from '../shared/vnode/virtual-vnode';
+import type { VNode } from '../shared/vnode/vnode';
+import type { ClientContainer } from './types';
+import { vnode_diff, vnode_diff_single } from './vnode-diff';
 import {
   type VNodeJournal,
   vnode_getFirstChild,
   vnode_insertBefore,
+  vnode_isElementOrVirtualVNode,
   vnode_remove,
   vnode_truncate,
 } from './vnode-utils';
-import type { VNode } from '../shared/vnode/vnode';
-import type { ElementVNode } from '../shared/vnode/element-vnode';
-import type { VirtualVNode } from '../shared/vnode/virtual-vnode';
-import type { Container } from '../../server/qwik-types';
-import type { JSXNode, JSXOutput } from '../shared/jsx/types/jsx-node';
-import { vnode_diff_single } from './vnode-diff';
-import { isJSXNode } from '../shared/jsx/jsx-node';
-import type { ClientContainer } from './types';
-import type { Cursor } from '../shared/cursor/cursor';
-import { isDev } from '@qwik.dev/core/build';
 
 type Key = string;
 type KeyedRowVNode = ElementVNode | VirtualVNode;
 
-function collectCurrentKeyedChildren(parent: VirtualVNode): KeyedRowVNode[] {
+function collectCurrentKeyedChildren(parent: ElementVNode | VirtualVNode): KeyedRowVNode[] {
   const rows: KeyedRowVNode[] = [];
   let child = vnode_getFirstChild(parent);
 
   while (child) {
-    if ((child as KeyedRowVNode).key != null) {
-      rows.push(child as KeyedRowVNode);
+    if (vnode_isElementOrVirtualVNode(child) && child.key != null) {
+      rows.push(child);
     }
-    child = (child as KeyedRowVNode).nextSibling as KeyedRowVNode | null;
+    child = child.nextSibling as VNode | null;
   }
 
   return rows;
 }
 
-// Reused rows that belong to the LIS can stay where they are; everything else needs to move.
-// This computes the plan only. We still need a later pass to apply inserts/moves/removals against
-// the actual vnode tree, because the LIS works on indexes rather than concrete sibling pointers.
 function getStableRowMask(oldIndexes: ArrayLike<number>): Uint8Array {
   const stableRows = new Uint8Array(oldIndexes.length);
   const predecessors = new Int32Array(oldIndexes.length);
@@ -98,6 +96,32 @@ function getStableRowMask(oldIndexes: ArrayLike<number>): Uint8Array {
   return stableRows;
 }
 
+function renderKeyedRow<T>(
+  item: T,
+  index: number,
+  key: Key,
+  renderItem: (item: T, index: number) => JSXOutput
+): JSXNode {
+  const jsx = renderItem(item, index) as JSXNode;
+  if (isDev && !isJSXNode(jsx)) {
+    throw new Error('Each item$ must return a single JSX node');
+  }
+  jsx.key = key;
+  return jsx;
+}
+
+function renderAllRows<T>(
+  items: readonly T[],
+  keyOf: (item: T, index: number) => Key,
+  renderItem: (item: T, index: number) => JSXOutput
+): JSXNode[] {
+  const rows = new Array<JSXNode>(items.length);
+  for (let i = 0; i < items.length; i++) {
+    rows[i] = renderKeyedRow(items[i], i, keyOf(items[i], i), renderItem);
+  }
+  return rows;
+}
+
 export async function reconcileKeyedLoopToParent<T>(
   container: Container,
   journal: VNodeJournal,
@@ -107,99 +131,230 @@ export async function reconcileKeyedLoopToParent<T>(
   keyOf: (item: T, index: number) => Key,
   renderItem: (item: T, index: number) => JSXOutput
 ): Promise<void> {
+  const clientContainer = container as ClientContainer;
   const oldRows = collectCurrentKeyedChildren(parent);
   const itemsLength = items.length;
   const oldRowsLength = oldRows.length;
-  let anchor: VNode | null = null;
+  const keys = new Array<Key>(itemsLength);
+
+  for (let i = 0; i < itemsLength; i++) {
+    keys[i] = keyOf(items[i], i);
+  }
+
+  // Fast path: initial keyed mount, so let the full diff create the whole loop.
   if (oldRowsLength === 0) {
-    // Fast path: no keyed children, we can just append everything.
-    for (let i = itemsLength - 1; i >= 0; i--) {
-      const jsx = renderItem(items[i], i) as JSXNode;
-      const key = keyOf(items[i], i);
-      jsx.key = key;
-      await insertNode(container, journal, parent, anchor, cursor, jsx, key, null);
-      anchor = (anchor ? anchor.previousSibling : parent.lastChild) ?? null;
+    if (itemsLength > 0) {
+      await vnode_diff(
+        clientContainer,
+        journal,
+        renderAllRows(items, keyOf, renderItem),
+        parent,
+        cursor,
+        null
+      );
     }
     return;
-  } else if (itemsLength === 0) {
-    // Fast path: no new items, we can just remove everything.
+  }
+
+  // Fast path: removing the entire loop is cheaper than row-by-row deletes.
+  if (itemsLength === 0) {
     vnode_truncate(journal, parent, oldRows[0], true);
     return;
   }
+
+  // Trim the unchanged prefix/suffix first so the expensive keyed work only sees the middle window.
+  let start = 0;
+  while (start < oldRowsLength && start < itemsLength && oldRows[start].key === keys[start]) {
+    start++;
+  }
+
+  let oldEnd = oldRowsLength - 1;
+  let newEnd = itemsLength - 1;
+  while (oldEnd >= start && newEnd >= start && oldRows[oldEnd].key === keys[newEnd]) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  // Fast path: head/tail scans consumed everything, so the lists already match.
+  if (start > oldEnd && start > newEnd) {
+    return;
+  }
+
+  // Fast path: only insertions remain between the matched head and tail.
+  if (start > oldEnd) {
+    const tailAnchor = newEnd + 1 < itemsLength ? (oldRows[start] ?? null) : null;
+
+    if (tailAnchor === null) {
+      // Pure append: stream new rows at the end without any move bookkeeping.
+      for (let i = start; i <= newEnd; i++) {
+        await vnode_diff_single(
+          clientContainer,
+          journal,
+          renderKeyedRow(items[i], i, keys[i], renderItem),
+          parent,
+          null,
+          null,
+          cursor,
+          null
+        );
+      }
+      return;
+    }
+
+    // Insert before an unchanged tail by walking the new middle window from right to left.
+    let anchor: VNode | null = tailAnchor;
+    for (let i = newEnd; i >= start; i--) {
+      await vnode_diff_single(
+        clientContainer,
+        journal,
+        renderKeyedRow(items[i], i, keys[i], renderItem),
+        parent,
+        anchor,
+        anchor,
+        cursor,
+        null
+      );
+
+      const inserted = anchor.previousSibling as KeyedRowVNode | null;
+      if (isDev && !inserted) {
+        throw new Error('Failed to insert keyed loop row');
+      }
+      if (inserted) {
+        anchor = inserted;
+      }
+    }
+    return;
+  }
+
+  // Fast path: only removals remain between the matched head and tail.
+  if (start > newEnd) {
+    if (start === 0) {
+      vnode_truncate(journal, parent, oldRows[0], true);
+    } else {
+      for (let i = start; i <= oldEnd; i++) {
+        vnode_remove(journal, parent, oldRows[i], true);
+      }
+    }
+    return;
+  }
+
   const oldByKey = new Map<Key, KeyedRowVNode>();
   const oldIndexByKey = new Map<Key, number>();
-
-  for (let i = 0; i < oldRowsLength; i++) {
+  for (let i = start; i <= oldEnd; i++) {
     const row = oldRows[i];
-    if (row.key == null) {
-      continue;
-    }
-    oldByKey.set(row.key, row);
-    oldIndexByKey.set(row.key, i);
+    oldByKey.set(row.key!, row);
+    oldIndexByKey.set(row.key!, i - start);
   }
 
-  const keys = new Array<Key>(itemsLength);
-  const oldIndexes = new Int32Array(itemsLength);
+  let overlap = 0;
+  const oldIndexes = new Int32Array(newEnd - start + 1);
   oldIndexes.fill(-1);
-  for (let i = 0; i < itemsLength; i++) {
-    const key = keyOf(items[i], i);
-    keys[i] = key;
-    const oldIndex = oldIndexByKey.get(key);
+  for (let i = start; i <= newEnd; i++) {
+    const oldIndex = oldIndexByKey.get(keys[i]);
     if (oldIndex !== undefined) {
-      oldIndexes[i] = oldIndex;
+      overlap++;
+      oldIndexes[i - start] = oldIndex;
     }
   }
-  const stableRows = getStableRowMask(oldIndexes);
 
-  // Walk from the end so `anchor` is always the vnode that should come after the current item in
-  // the final order. `stableRows` tells us which reused nodes can stay put; this pass performs the
-  // concrete vnode operations and creates any newly inserted rows.
-  for (let i = itemsLength - 1; i >= 0; i--) {
+  // Fast path: the middle window has no shared keys, so replace that slice instead of moving rows.
+  if (overlap === 0) {
+    if (start === 0 && newEnd === itemsLength - 1 && oldEnd === oldRowsLength - 1) {
+      vnode_truncate(journal, parent, oldRows[0], true);
+      await vnode_diff(
+        clientContainer,
+        journal,
+        renderAllRows(items, keyOf, renderItem),
+        parent,
+        cursor,
+        null
+      );
+    } else {
+      for (let i = start; i <= oldEnd; i++) {
+        vnode_remove(journal, parent, oldRows[i], true);
+      }
+
+      let anchor: VNode | null = newEnd + 1 < itemsLength ? oldRows[newEnd + 1] : null;
+      if (anchor === null) {
+        for (let i = start; i <= newEnd; i++) {
+          await vnode_diff_single(
+            clientContainer,
+            journal,
+            renderKeyedRow(items[i], i, keys[i], renderItem),
+            parent,
+            null,
+            null,
+            cursor,
+            null
+          );
+        }
+      } else {
+        for (let i = newEnd; i >= start; i--) {
+          await vnode_diff_single(
+            clientContainer,
+            journal,
+            renderKeyedRow(items[i], i, keys[i], renderItem),
+            parent,
+            anchor,
+            anchor,
+            cursor,
+            null
+          );
+
+          const inserted = anchor.previousSibling as KeyedRowVNode | null;
+          if (isDev && !inserted) {
+            throw new Error('Failed to insert keyed loop row');
+          }
+          if (inserted) {
+            anchor = inserted;
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  // General keyed path: preserve the longest stable subsequence and only move the rest.
+  const stableRows = getStableRowMask(oldIndexes);
+  let anchor: VNode | null = newEnd + 1 < itemsLength ? oldRows[newEnd + 1] : null;
+
+  for (let i = newEnd; i >= start; i--) {
     const item = items[i];
     const key = keys[i];
-
     const reused = oldByKey.get(key) ?? null;
+
     if (reused) {
       oldByKey.delete(key);
-      if (stableRows[i] === 0) {
+      if (stableRows[i - start] === 0) {
         vnode_insertBefore(journal, parent, reused, anchor);
       }
       anchor = reused;
     } else {
-      const jsx = renderItem(item, i) as JSXNode;
-      await insertNode(container, journal, parent, anchor, cursor, jsx, key, reused);
-      anchor = (anchor ? anchor.previousSibling : parent.lastChild) ?? null;
+      await vnode_diff_single(
+        clientContainer,
+        journal,
+        renderKeyedRow(item, i, key, renderItem),
+        parent,
+        anchor,
+        anchor,
+        cursor,
+        null
+      );
+
+      const inserted: KeyedRowVNode | null =
+        (anchor
+          ? (anchor.previousSibling as KeyedRowVNode | null)
+          : (parent.lastChild as KeyedRowVNode | null)) || null;
+      if (isDev && !inserted) {
+        throw new Error('Failed to insert keyed loop row');
+      }
+      if (inserted) {
+        anchor = inserted;
+      }
     }
   }
 
-  // Anything still left in the old-key map was not claimed by the new list and must be removed.
   for (const leftover of oldByKey.values()) {
     vnode_remove(journal, parent, leftover, true);
   }
-}
-
-async function insertNode(
-  container: Container,
-  journal: VNodeJournal,
-  parent: ElementVNode | VirtualVNode,
-  anchor: VNode | null,
-  cursor: Cursor,
-  jsx: JSXNode,
-  key: Key,
-  reused: VNode | null
-): Promise<void> {
-  if (isDev && !isJSXNode(jsx)) {
-    throw new Error('Each item$ must return a single JSX node');
-  }
-  (jsx as JSXNode).key = key;
-  await vnode_diff_single(
-    container as ClientContainer,
-    journal,
-    jsx,
-    parent,
-    reused,
-    anchor,
-    cursor,
-    null
-  );
 }
