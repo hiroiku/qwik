@@ -9,7 +9,7 @@ import { assertDefined } from '../error/assert';
 import { QError, qError } from '../error/error';
 import { getQFuncs } from '../utils/markers';
 import { isPromise, maybeThen } from '../utils/promises';
-import { qDev, qSerialize, qTest, seal } from '../utils/qdev';
+import { qDev, qSerialize, qTest } from '../utils/qdev';
 import { isFunction, type ValueOrPromise } from '../utils/types';
 import type { QRLDev } from './qrl';
 import { getSymbolHash, SYNC_QRL } from './qrl-utils';
@@ -67,9 +67,6 @@ export type QRLInternalMethods<TYPE> = {
 
   /** The shared lazy-loading reference */
   readonly $lazy$: LazyRef<TYPE>;
-
-  /** Only in dev mode */
-  $origSymbolRef$?: null | ValueOrPromise<TYPE>;
 };
 
 /**
@@ -77,24 +74,22 @@ export type QRLInternalMethods<TYPE> = {
  * same chunk+symbol can share a single LazyRef, differing only in their captured scope.
  */
 export class LazyRef<TYPE = unknown> {
-  $ref$?: null | ValueOrPromise<TYPE>;
   // Don't allocate dev property immediately so that in prod we don't have this property
   dev?: QRLDev | null | undefined;
-  $origSymbolRef$?: null | ValueOrPromise<TYPE>;
 
   constructor(
     readonly $chunk$: string | null,
     readonly $symbol$: string,
     readonly $symbolFn$: undefined | null | (() => Promise<Record<string, TYPE>>),
-    $ref$?: null | ValueOrPromise<TYPE>,
+    public $ref$?: null | ValueOrPromise<TYPE>,
     public $container$?: Container | null
   ) {
-    // Retrieve memoized result from symbolFn
-    if ($symbolFn$ && !$ref$ && $symbol$ in $symbolFn$) {
-      $ref$ = ($symbolFn$ as any)[$symbol$];
-    }
     if ($ref$) {
       this.$setRef$($ref$);
+    }
+    if (qDev) {
+      // this will be filled in later
+      this.dev = null;
     }
 
     /** Preload the chunk with somewhat lower probability when we create the QRL. */
@@ -193,6 +188,13 @@ class QRLClass<TYPE> extends Function implements QRLInternalMethods<TYPE> {
     super();
     if ($captures$) {
       this.$captures$ = $captures$;
+      if (qDev && qSerialize) {
+        if ($captures$ && typeof $captures$ === 'object') {
+          for (const item of $captures$) {
+            verifySerializable(item, 'Captured variable in the closure can not be serialized');
+          }
+        }
+      }
     }
 
     // If it is a plain value without computed captures, the qrl will be resolved immediately.
@@ -221,9 +223,6 @@ class QRLClass<TYPE> extends Function implements QRLInternalMethods<TYPE> {
   }
   get dev(): QRLDev | null | undefined {
     return this.$lazy$.dev;
-  }
-  get $origSymbolRef$(): null | ValueOrPromise<TYPE> | undefined {
-    return this.$lazy$.$origSymbolRef$;
   }
 
   $setContainer$(container: Container): void {
@@ -410,26 +409,8 @@ export const createQRL = <TYPE>(
   captures?: Readonly<unknown[]> | string | null,
   container?: Container
 ): QRLInternal<TYPE> => {
-  // In dev mode we need to preserve the original symbolRef without wrapping
-  let origSymbolRef: ValueOrPromise<TYPE> | null | undefined;
-  if (qDev && qSerialize) {
-    origSymbolRef = symbolRef;
-    if (captures && typeof captures === 'object') {
-      for (const item of captures) {
-        verifySerializable(item, 'Captured variable in the closure can not be serialized');
-      }
-    }
-  }
-
   const lazy = new LazyRef<TYPE>(chunk, symbol, symbolFn, symbolRef, container);
   const qrl = new QRLClass<TYPE>(lazy, captures!);
-  if (qDev) {
-    // we'll fill this in later
-    lazy.dev = null;
-    lazy.$origSymbolRef$ = origSymbolRef;
-    seal(lazy);
-    seal(qrl);
-  }
 
   return makeQrlFn(qrl);
 };

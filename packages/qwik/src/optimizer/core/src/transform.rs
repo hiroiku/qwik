@@ -977,7 +977,7 @@ impl<'a> QwikTransform<'a> {
 						SegmentKind::JSXProp
 					};
 					let qrl = self.create_synthetic_qsegment(*expr, segment_kind, ctx_name, None);
-					let hoisted = self.hoist_qrl_to_module_scope_if_no_captures(qrl);
+					let hoisted = self.hoist_qrl_to_module_scope(qrl);
 					Some(ast::JSXAttrValue::JSXExprContainer(ast::JSXExprContainer {
 						span: DUMMY_SP,
 						expr: ast::JSXExpr::Expr(Box::new(hoisted)),
@@ -1107,39 +1107,49 @@ impl<'a> QwikTransform<'a> {
 			.unwrap_or(current_depth)
 	}
 
-	/// Hoist QRL creation if inside a loop, or return the call expression as-is
+	/// Hoist QRL creation to module scope. The QRL itself (without captures) is always hoisted
+	/// to module scope. If captures exist, a `.$withCaptures$([...])` call is returned.
+	/// When inside a loop, the `$withCaptures$` call is further hoisted to the highest scope
+	/// where all captures are available, for efficiency.
 	fn hoist_qrl_if_needed(&mut self, converted_expr: ast::CallExpr, is_fn: bool) -> ast::Expr {
-		let module_hoisted = self.hoist_qrl_to_module_scope_if_no_captures(converted_expr);
-		let converted_expr = match module_hoisted {
+		let module_hoisted = self.hoist_qrl_to_module_scope(converted_expr);
+
+		// If it's just an ident (no captures), no further hoisting needed
+		let with_captures_call = match module_hoisted {
 			ast::Expr::Call(call_expr) => call_expr,
-			expr => {
-				return expr;
-			}
+			expr => return expr,
 		};
-		// Hoist QRLs only when inside a loop (for, while, .map(), etc.)
-		// This creates a single QRL declaration outside the loop for efficiency
-		// Don't hoist component$ QRLs (is_fn = true)
-		// Also need an active hoisting scope (hoisted_qrls not empty)
+
+		// Hoist $withCaptures$ calls when inside a loop (for, while, .map(), etc.)
+		// This creates a single declaration outside the loop for efficiency.
+		// Don't hoist component$ QRLs (is_fn = true).
 		let should_hoist =
 			!self.iteration_var_stack.is_empty() && !is_fn && !self.hoisted_qrls.is_empty();
 
 		if should_hoist {
-			// Extract symbol name from the QRL call (second argument)
-			let symbol_name =
-				if let Some(ast::ExprOrSpread { expr, .. }) = converted_expr.args.get(1) {
-					if let ast::Expr::Lit(ast::Lit::Str(s)) = &**expr {
-						s.value.to_string()
-					} else {
-						format!("qrl_{}", converted_expr.span.lo.0)
-					}
+			// Extract symbol name from the hoisted ident used as the receiver.
+			// The module-scope const is named `_qrl_<symbol>`, so strip the prefix
+			// to avoid shadowing it.
+			let symbol_name = if let ast::Callee::Expr(box ast::Expr::Member(ref member)) =
+				with_captures_call.callee
+			{
+				if let ast::Expr::Ident(ref ident) = *member.obj {
+					ident
+						.sym
+						.strip_prefix("_qrl_")
+						.unwrap_or(&ident.sym)
+						.to_string()
 				} else {
-					format!("qrl_{}", converted_expr.span.lo.0)
-				};
+					format!("qrl_{}", with_captures_call.span.lo.0)
+				}
+			} else {
+				format!("qrl_{}", with_captures_call.span.lo.0)
+			};
 
 			let current_depth = self.hoisted_qrls.len() - 1;
 			let target_depth = self.compute_hoist_target_depth(current_depth);
 
-			// Check if we already hoisted this QRL at target depth
+			// Check if we already hoisted this $withCaptures$ call at target depth
 			let existing_var = self.hoisted_qrls[target_depth]
 				.iter()
 				.find_map(|(name, _)| {
@@ -1157,7 +1167,6 @@ impl<'a> QwikTransform<'a> {
 			if let Some(existing_ident) = existing_var {
 				existing_ident
 			} else {
-				// Hoist the QRL creation to the scope that contains all captures
 				let var_declarator = ast::VarDeclarator {
 					span: DUMMY_SP,
 					name: ast::Pat::Ident(ast::BindingIdent {
@@ -1168,7 +1177,7 @@ impl<'a> QwikTransform<'a> {
 						),
 						type_ann: None,
 					}),
-					init: Some(Box::new(ast::Expr::Call(converted_expr))),
+					init: Some(Box::new(ast::Expr::Call(with_captures_call))),
 					definite: false,
 				};
 
@@ -1181,33 +1190,27 @@ impl<'a> QwikTransform<'a> {
 				))
 			}
 		} else {
-			ast::Expr::Call(converted_expr)
+			ast::Expr::Call(with_captures_call)
 		}
 	}
 
-	fn hoist_qrl_to_module_scope_if_no_captures(&mut self, call_expr: ast::CallExpr) -> ast::Expr {
+	fn hoist_qrl_to_module_scope(&mut self, call_expr: ast::CallExpr) -> ast::Expr {
 		let mut call_expr = call_expr;
-		let has_capture_array = call_expr
-			.args
-			.iter()
-			.any(|arg| matches!(&*arg.expr, ast::Expr::Array(_)));
-		if has_capture_array {
-			return ast::Expr::Call(call_expr);
-		}
-		let is_inlined_qrl =
-			if let ast::Callee::Expr(box ast::Expr::Ident(ref ident)) = call_expr.callee {
-				ident.sym == *_INLINED_QRL || ident.sym == *_INLINED_QRL_DEV
-			} else {
-				false
-			};
 
-		if is_inlined_qrl {
-			if let Some(first_arg) = call_expr.args.first() {
-				if matches!(&*first_arg.expr, ast::Expr::Ident(_)) {
-					return ast::Expr::Call(call_expr);
+		// Extract and remove capture array from the QRL call args (if present)
+		let capture_array = {
+			let pos = call_expr
+				.args
+				.iter()
+				.position(|arg| matches!(&*arg.expr, ast::Expr::Array(_)));
+			pos.map(|i| {
+				if let ast::Expr::Array(arr) = *call_expr.args.remove(i).expr {
+					arr
+				} else {
+					unreachable!()
 				}
-			}
-		}
+			})
+		};
 
 		if let Some(comments) = self.options.comments {
 			let span = Span::dummy_with_cmt();
@@ -1245,7 +1248,28 @@ impl<'a> QwikTransform<'a> {
 			);
 		}
 
-		ast::Expr::Ident(new_ident_from_id(&id))
+		let hoisted_ident = ast::Expr::Ident(new_ident_from_id(&id));
+
+		// If there were captures, wrap with .$withCaptures$([captures])
+		if let Some(captures) = capture_array {
+			ast::Expr::Call(ast::CallExpr {
+				callee: ast::Callee::Expr(Box::new(ast::Expr::Member(ast::MemberExpr {
+					obj: Box::new(hoisted_ident),
+					prop: ast::MemberProp::Ident(ast::IdentName::new(
+						"$withCaptures$".into(),
+						DUMMY_SP,
+					)),
+					span: DUMMY_SP,
+				}))),
+				args: vec![ast::ExprOrSpread {
+					spread: None,
+					expr: Box::new(ast::Expr::Array(captures)),
+				}],
+				..Default::default()
+			})
+		} else {
+			hoisted_ident
+		}
 	}
 
 	/// Helper function to merge an event handler with an existing one in the props list.
@@ -1495,32 +1519,9 @@ impl<'a> QwikTransform<'a> {
 			..Default::default()
 		});
 
-		// When there are captures, the qrl() call stays in a function body,
-		// so keep the import function as a separate module-level const to avoid
-		// recreating it on every call. When no captures, the qrl() call itself
-		// gets hoisted to module scope, so we can inline the import arrow.
-		let import_arg = if segment_data.scoped_idents.is_empty() {
-			import_fn
-		} else {
-			let import_fn_name = private_ident!(format!("i_{}", segment_data.hash));
-			self.extra_top_items.insert(
-				id!(import_fn_name),
-				ast::ModuleItem::Stmt(ast::Stmt::Decl(ast::Decl::Var(Box::new(ast::VarDecl {
-					kind: ast::VarDeclKind::Const,
-					decls: vec![ast::VarDeclarator {
-						name: ast::Pat::Ident(ast::BindingIdent::from(import_fn_name.clone())),
-						init: Some(Box::new(import_fn)),
-						definite: false,
-						span: DUMMY_SP,
-					}],
-					..Default::default()
-				})))),
-			);
-			ast::Expr::Ident(import_fn_name)
-		};
-
+		// The qrl() call is always hoisted to module scope, so we can inline the import arrow.
 		let mut args = vec![
-			import_arg,
+			import_fn,
 			ast::Expr::Lit(ast::Lit::Str(ast::Str {
 				span: DUMMY_SP,
 				value: symbol.into(),
@@ -3695,7 +3696,7 @@ impl<'a> Fold for QwikTransform<'a> {
 						ctx_name.clone(),
 						None,
 					);
-					let hoisted = self.hoist_qrl_to_module_scope_if_no_captures(qrl);
+					let hoisted = self.hoist_qrl_to_module_scope(qrl);
 					ast::ExprOrSpread {
 						expr: Box::new(hoisted.fold_with(self)),
 						..arg

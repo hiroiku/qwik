@@ -66,28 +66,10 @@ const NoWorks2_component_useTask_lXiqwbxxjq0 = ({ track })=>{
     track(()=>count);
     console.log(count);
 };
-const NoWorks2_component_JPD9t2HyEKg = ({ count, stuff: { hey } })=>{
-    console.log(hey);
-    useTaskQrl(/*#__PURE__*/ inlinedQrl(NoWorks2_component_useTask_lXiqwbxxjq0, "NoWorks2_component_useTask_lXiqwbxxjq0", [
-        count
-    ]));
-    return /*#__PURE__*/ _jsxSorted("div", {
-        class: count
-    }, null, count, 1, "u6_1");
-};
 const NoWorks3_component_useTask_3cQGU0s1VwU = ({ track })=>{
     const count = _captures[0];
     track(()=>count);
     console.log(count);
-};
-const NoWorks3_component_fc13h5yYn14 = ({ count, stuff = hola() })=>{
-    console.log(stuff);
-    useTaskQrl(/*#__PURE__*/ inlinedQrl(NoWorks3_component_useTask_3cQGU0s1VwU, "NoWorks3_component_useTask_3cQGU0s1VwU", [
-        count
-    ]));
-    return /*#__PURE__*/ _jsxSorted("div", {
-        class: count
-    }, null, count, 1, "u6_2");
 };
 const Works_component_useTask_pjo5U5Ikll0 = ({ track })=>{
     const _rawProps = _captures[0], rest = _captures[1];
@@ -100,6 +82,35 @@ const _hf1 = (p0)=>({
         some: p0.some ?? 3
     });
 const _hf1_str = "{some:p0.some??1+2}";
+//
+const _qrl_NoWorks2_component_useTask_lXiqwbxxjq0 = /*#__PURE__*/ inlinedQrl(NoWorks2_component_useTask_lXiqwbxxjq0, "NoWorks2_component_useTask_lXiqwbxxjq0");
+//
+const NoWorks2_component_JPD9t2HyEKg = ({ count, stuff: { hey } })=>{
+    console.log(hey);
+    useTaskQrl(_qrl_NoWorks2_component_useTask_lXiqwbxxjq0.$withCaptures$([
+        count
+    ]));
+    return /*#__PURE__*/ _jsxSorted("div", {
+        class: count
+    }, null, count, 1, "u6_1");
+};
+//
+const _qrl_NoWorks2_component_JPD9t2HyEKg = /*#__PURE__*/ inlinedQrl(NoWorks2_component_JPD9t2HyEKg, "NoWorks2_component_JPD9t2HyEKg");
+const _qrl_NoWorks3_component_useTask_3cQGU0s1VwU = /*#__PURE__*/ inlinedQrl(NoWorks3_component_useTask_3cQGU0s1VwU, "NoWorks3_component_useTask_3cQGU0s1VwU");
+//
+const NoWorks3_component_fc13h5yYn14 = ({ count, stuff = hola() })=>{
+    console.log(stuff);
+    useTaskQrl(_qrl_NoWorks3_component_useTask_3cQGU0s1VwU.$withCaptures$([
+        count
+    ]));
+    return /*#__PURE__*/ _jsxSorted("div", {
+        class: count
+    }, null, count, 1, "u6_2");
+};
+//
+const _qrl_NoWorks3_component_fc13h5yYn14 = /*#__PURE__*/ inlinedQrl(NoWorks3_component_fc13h5yYn14, "NoWorks3_component_fc13h5yYn14");
+const _qrl_Works_component_useTask_pjo5U5Ikll0 = /*#__PURE__*/ inlinedQrl(Works_component_useTask_pjo5U5Ikll0, "Works_component_useTask_pjo5U5Ikll0");
+//
 const Works_component_t45qL4vNGv0 = (_rawProps)=>{
     const rest = _restProps(_rawProps, [
         "count",
@@ -109,7 +120,7 @@ const Works_component_t45qL4vNGv0 = (_rawProps)=>{
         "stuffDefault"
     ]);
     console.log(_rawProps.stuff, _rawProps.some ?? 3);
-    useTaskQrl(/*#__PURE__*/ inlinedQrl(Works_component_useTask_pjo5U5Ikll0, "Works_component_useTask_pjo5U5Ikll0", [
+    useTaskQrl(_qrl_Works_component_useTask_pjo5U5Ikll0.$withCaptures$([
         _rawProps,
         rest
     ]));
@@ -127,12 +138,15 @@ const Works_component_t45qL4vNGv0 = (_rawProps)=>{
         override: true
     }, _wrapProp(_rawProps, "count"), 0, "u6_0");
 };
-export const Works = /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrl(Works_component_t45qL4vNGv0, "Works_component_t45qL4vNGv0"));
-export const NoWorks2 = /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrl(NoWorks2_component_JPD9t2HyEKg, "NoWorks2_component_JPD9t2HyEKg"));
-export const NoWorks3 = /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrl(NoWorks3_component_fc13h5yYn14, "NoWorks3_component_fc13h5yYn14"));
+//
+const _qrl_Works_component_t45qL4vNGv0 = /*#__PURE__*/ inlinedQrl(Works_component_t45qL4vNGv0, "Works_component_t45qL4vNGv0");
+//
+export const Works = /*#__PURE__*/ componentQrl(_qrl_Works_component_t45qL4vNGv0);
+export const NoWorks2 = /*#__PURE__*/ componentQrl(_qrl_NoWorks2_component_JPD9t2HyEKg);
+export const NoWorks3 = /*#__PURE__*/ componentQrl(_qrl_NoWorks3_component_fc13h5yYn14);
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;;;;;;;;;+CAsBU,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,IAAM;IACZ,QAAQ,GAAG,CAAC;;uCAJqB,CAAC,EAAC,KAAK,EAAE,OAAO,EAAC,GAAG,EAAC,EAAC;IACxD,QAAQ,GAAG,CAAC;IACZ;;;IAIA,qBACC,WAAC;QAAI,OAAO;aAAQ;AAEtB;+CAIU,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,IAAM;IACZ,QAAQ,GAAG,CAAC;;uCAJqB,CAAC,EAAC,KAAK,EAAE,QAAQ,MAAM,EAAC;IAC1D,QAAQ,GAAG,CAAC;IACZ;;;IAIA,qBACC,WAAC;QAAI,OAAO;aAAQ;AAEtB;4CA7BU,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,cARP;IASC,QAAQ,GAAG,WATZ,OASoB,gBANpB,iBAFA,QAAO,aAGP,gBAAqB;;sBAHrB,QAAO;;mBAWmB,CAAA;QAAE,IAAI,KAXhC,QAAO;IAW0B,CAAA;;oCAbF;;;;;;;;IAO/B,QAAQ,GAAG,WAHX,iBAFA,QAAO;IAMP;;;;IAIA,qBACC,UAAC;QAAI,IAAI;;;QAAQ,MAAM;;;QAAY,KAAK;wBAAa;;0BAAA;QAAM,QAAQ;;AAErE;AAfA,OAAO,MAAM,sBAAQ,mGAelB;AAEH,OAAO,MAAM,yBAAW,yGASrB;AAEH,OAAO,MAAM,yBAAW,yGASrB\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;;;;;;;;;+CAsBU,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,IAAM;IACZ,QAAQ,GAAG,CAAC;;+CASJ,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,IAAM;IACZ,QAAQ,GAAG,CAAC;;4CAxBJ,CAAC,EAAC,KAAK,EAAC;;IAChB,MAAM,cARP;IASC,QAAQ,GAAG,WATZ,OASoB,gBANpB,iBAFA,QAAO,aAGP,gBAAqB;;sBAHrB,QAAO;;mBAWmB,CAAA;QAAE,IAAI,KAXhC,QAAO;IAW0B,CAAA;;;;;uCAIC,CAAC,EAAC,KAAK,EAAE,OAAO,EAAC,GAAG,EAAC,EAAC;IACxD,QAAQ,GAAG,CAAC;IACZ;;;IAIA,qBACC,WAAC;QAAI,OAAO;aAAQ;AAEtB;;;;;uCAEmC,CAAC,EAAC,KAAK,EAAE,QAAQ,MAAM,EAAC;IAC1D,QAAQ,GAAG,CAAC;IACZ;;;IAIA,qBACC,WAAC;QAAI,OAAO;aAAQ;AAEtB;;;;;oCArCgC;;;;;;;;IAO/B,QAAQ,GAAG,WAHX,iBAFA,QAAO;IAMP;;;;IAIA,qBACC,UAAC;QAAI,IAAI;;;QAAQ,MAAM;;;QAAY,KAAK;wBAAa;;0BAAA;QAAM,QAAQ;;AAErE;;;;AAfA,OAAO,MAAM,sBAAQ,+CAelB;AAEH,OAAO,MAAM,yBAAW,kDASrB;AAEH,OAAO,MAAM,yBAAW,kDASrB\"}")
 == DIAGNOSTICS ==
 
 []

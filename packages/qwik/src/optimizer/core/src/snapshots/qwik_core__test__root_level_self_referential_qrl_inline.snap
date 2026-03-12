@@ -46,18 +46,21 @@ const Tree_component_XMEiO6Rrd3Y = (props)=>{
         columnNumber: 3
     });
 };
-// Root-level self-referential component
-// The QRL should NOT be hoisted before the component function is defined
-// or should use two-phase emission to avoid forward reference
-export const Tree = /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrlDEV(Tree_component_XMEiO6Rrd3Y, "Tree_component_XMEiO6Rrd3Y", {
+//
+const _qrl_Tree_component_XMEiO6Rrd3Y = /*#__PURE__*/ inlinedQrlDEV(Tree_component_XMEiO6Rrd3Y, "Tree_component_XMEiO6Rrd3Y", {
     file: "/user/qwik/src/node_modules/qwik-tree/index.qwik.jsx",
     lo: 257,
     hi: 393,
     displayName: "index.qwik.jsx_Tree_component"
-}));
+});
+// Root-level self-referential component
+// The QRL should NOT be hoisted before the component function is defined
+// or should use two-phase emission to avoid forward reference
+//
+export const Tree = /*#__PURE__*/ componentQrl(_qrl_Tree_component_XMEiO6Rrd3Y);
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/node_modules/qwik-tree/index.qwik.jsx\"],\"names\":[],\"mappings\":\";;;;;;;;mCAM+B,CAAC;IAC/B,qBACC,WAAC;kBACC;QACA,MAAM,QAAQ,IAAI,MAAM,QAAQ,CAAC,GAAG,CAAC,CAAC,sBAAU,UAAC;gCAAS;8BAAA;;;;;;;;;;AAG9D;AAVA,wCAAwC;AACxC,yEAAyE;AACzE,8DAA8D;AAC9D,OAAO,MAAM,qBAAO;;;;;IAOjB\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/node_modules/qwik-tree/index.qwik.jsx\"],\"names\":[],\"mappings\":\";;;;;;;;mCAM+B,CAAC;IAC/B,qBACC,WAAC;kBACC;QACA,MAAM,QAAQ,IAAI,MAAM,QAAQ,CAAC,GAAG,CAAC,CAAC,sBAAU,UAAC;gCAAS;8BAAA;;;;;;;;;;AAG9D;;;;;;;;AAVA,wCAAwC;AACxC,yEAAyE;AACzE,8DAA8D;;AAC9D,OAAO,MAAM,qBAAO,8CAOjB\"}")
 == DIAGNOSTICS ==
 
 []

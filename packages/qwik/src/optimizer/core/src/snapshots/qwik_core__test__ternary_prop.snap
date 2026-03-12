@@ -64,12 +64,9 @@ import { useSignal } from "@qwik.dev/core";
 //
 const _hf0 = (p0)=>p0.value ? true : undefined;
 const _hf0_str = "p0.value?true:undefined";
-//
-const i_WawHV3HwS1A = ()=>import("./test.tsx_Cmp_component_handleClick_WawHV3HwS1A");
-//
 export const Cmp_component_4ryKJTOKjWE = ()=>{
     const toggleSig = useSignal(false);
-    const handleClick$ = /*#__PURE__*/ qrl(i_WawHV3HwS1A, "Cmp_component_handleClick_WawHV3HwS1A", [
+    const handleClick$ = /*#__PURE__*/ qrl(()=>import("./test.tsx_Cmp_component_handleClick_WawHV3HwS1A"), "Cmp_component_handleClick_WawHV3HwS1A", [
         toggleSig
     ]);
     return /*#__PURE__*/ _jsxSorted("button", null, {
@@ -81,7 +78,7 @@ export const Cmp_component_4ryKJTOKjWE = ()=>{
 };
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;;mBAU+C,GAAU,KAAK,GAAG,OAAO;;;;;yCARxC;IAC7B,MAAM,YAAY,UAAU;IAE5B,MAAM;;;IAIN,qBACC,WAAC;QAAO,aAAU;QAAc,WAAS;;;OAAsC;AAIjF\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;;mBAU+C,GAAU,KAAK,GAAG,OAAO;;yCARxC;IAC7B,MAAM,YAAY,UAAU;IAE5B,MAAM;;;IAIN,qBACC,WAAC;QAAO,aAAU;QAAc,WAAS;;;OAAsC;AAIjF\"}")
 /*
 {
   "origin": "test.tsx",

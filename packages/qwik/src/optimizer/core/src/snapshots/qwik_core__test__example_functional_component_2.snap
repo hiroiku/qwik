@@ -61,8 +61,8 @@ import { _wrapProp } from "@qwik.dev/core";
 import { qrl } from "@qwik.dev/core";
 import { useStore } from "@qwik.dev/core";
 //
+const _qrl_App_component_div_button_q_e_click_UB6Fs5a3bd8 = /*#__PURE__*/ qrl(()=>import("./test.tsx_App_component_div_button_q_e_click_UB6Fs5a3bd8"), "App_component_div_button_q_e_click_UB6Fs5a3bd8");
 const _qrl_App_component_div_q_e_click_mi4E1piTWe8 = /*#__PURE__*/ qrl(()=>import("./test.tsx_App_component_div_q_e_click_mi4E1piTWe8"), "App_component_div_q_e_click_mi4E1piTWe8");
-const i_UB6Fs5a3bd8 = ()=>import("./test.tsx_App_component_div_button_q_e_click_UB6Fs5a3bd8");
 //
 export const App_component_ckEPmXZlub0 = (props)=>{
     const state = useCounter();
@@ -70,7 +70,7 @@ export const App_component_ckEPmXZlub0 = (props)=>{
         thing: 0
     });
     const count2 = state.count * 2;
-    const App_component_div_button_q_e_click_UB6Fs5a3bd8 = /*#__PURE__*/ qrl(i_UB6Fs5a3bd8, "App_component_div_button_q_e_click_UB6Fs5a3bd8", [
+    const App_component_div_button_q_e_click_UB6Fs5a3bd8 = _qrl_App_component_div_button_q_e_click_UB6Fs5a3bd8.$withCaptures$([
         props,
         state,
         thing

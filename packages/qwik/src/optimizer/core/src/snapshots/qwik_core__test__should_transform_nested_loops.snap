@@ -42,14 +42,14 @@ import { useSignal } from "@qwik.dev/core";
 const _hf0 = (p0)=>p0.value.id;
 const _hf0_str = "p0.value.id";
 //
+const _qrl_Foo_component_div_div_p_q_e_click_PjMbeUzoAMk = /*#__PURE__*/ qrl(()=>import("./test.tsx_Foo_component_div_div_p_q_e_click_PjMbeUzoAMk"), "Foo_component_div_div_p_q_e_click_PjMbeUzoAMk");
 const _qrl_Foo_component_div_div_q_e_click_vKrX4PmH2aM = /*#__PURE__*/ qrl(()=>import("./test.tsx_Foo_component_div_div_q_e_click_vKrX4PmH2aM"), "Foo_component_div_div_q_e_click_vKrX4PmH2aM");
-const i_PjMbeUzoAMk = ()=>import("./test.tsx_Foo_component_div_div_p_q_e_click_PjMbeUzoAMk");
 //
 export const Foo_component_HTDRsvUbLiE = function() {
     const data = useSignal([]);
     const data2 = useSignal([]);
     return /*#__PURE__*/ _jsxSorted("div", null, null, data.value.map((row)=>{
-        const Foo_component_div_div_p_q_e_click_PjMbeUzoAMk = /*#__PURE__*/ qrl(i_PjMbeUzoAMk, "Foo_component_div_div_p_q_e_click_PjMbeUzoAMk", [
+        const Foo_component_div_div_p_q_e_click_PjMbeUzoAMk = _qrl_Foo_component_div_div_p_q_e_click_PjMbeUzoAMk.$withCaptures$([
             row
         ]);
         return /*#__PURE__*/ _jsxSorted("div", {

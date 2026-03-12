@@ -86,7 +86,7 @@ import { _jsxSorted } from "@qwik.dev/core";
 import { qrl } from "@qwik.dev/core";
 import { useSignal } from "@qwik.dev/core";
 //
-const i_7fyCCEiYKFo = ()=>import("./test.tsx_test_component_div_div_div_button_q_e_click_7fyCCEiYKFo");
+const _qrl_test_component_div_div_div_button_q_e_click_7fyCCEiYKFo = /*#__PURE__*/ qrl(()=>import("./test.tsx_test_component_div_div_div_button_q_e_click_7fyCCEiYKFo"), "test_component_div_div_div_button_q_e_click_7fyCCEiYKFo");
 //
 export const test_component_LUXeXe0DQrg = ()=>{
     const data = useSignal([
@@ -113,7 +113,7 @@ export const test_component_LUXeXe0DQrg = ()=>{
     ]);
     return /*#__PURE__*/ _jsxSorted("div", null, null, data.value.map((plane, pi)=>{
         const planeId = 'p' + pi;
-        const test_component_div_div_div_button_q_e_click_7fyCCEiYKFo = /*#__PURE__*/ qrl(i_7fyCCEiYKFo, "test_component_div_div_div_button_q_e_click_7fyCCEiYKFo", [
+        const test_component_div_div_div_button_q_e_click_7fyCCEiYKFo = _qrl_test_component_div_div_div_button_q_e_click_7fyCCEiYKFo.$withCaptures$([
             planeId
         ]);
         return /*#__PURE__*/ _jsxSorted("div", null, null, plane.map((row, ri)=>/*#__PURE__*/ _jsxSorted("div", null, null, row.map((cell, ci)=>/*#__PURE__*/ _jsxSorted("button", {

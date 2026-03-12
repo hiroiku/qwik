@@ -37,10 +37,13 @@ const Issue3795_component_wsE8beycatI = ()=>{
         secondAssignment
     ], 1, "u6_0");
 };
-export const Issue3795 = /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrl(Issue3795_component_wsE8beycatI, "Issue3795_component_wsE8beycatI"));
+//
+const _qrl_Issue3795_component_wsE8beycatI = /*#__PURE__*/ inlinedQrl(Issue3795_component_wsE8beycatI, "Issue3795_component_wsE8beycatI");
+//
+export const Issue3795 = /*#__PURE__*/ componentQrl(_qrl_Issue3795_component_wsE8beycatI);
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;wCAGoC;IACnC,IAAI,OAAO;IACX,MAAM,kBAAkB;IACxB,QAAQ;IACR,MAAM,mBAAmB;IACzB,qBACC,WAAC;QAAI,IAAG;;QAAqB;QAAgB;QAAE;;AAEhD;AARD,OAAO,MAAM,0BAAY,2GAQrB\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;wCAGoC;IACnC,IAAI,OAAO;IACX,MAAM,kBAAkB;IACxB,QAAQ;IACR,MAAM,mBAAmB;IACzB,qBACC,WAAC;QAAI,IAAG;;QAAqB;QAAgB;QAAE;;AAEhD;;;;AARD,OAAO,MAAM,0BAAY,mDAQrB\"}")
 == DIAGNOSTICS ==
 
 []

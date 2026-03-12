@@ -34,10 +34,13 @@ export const FOO_MAPPING = {
 const test_component_LUXeXe0DQrg = ()=>{
     return <>{FOO_MAPPING['A']}</>;
 };
-export default /*#__PURE__*/ componentQrl(/*#__PURE__*/ inlinedQrl(test_component_LUXeXe0DQrg, "test_component_LUXeXe0DQrg"));
+//
+const _qrl_test_component_LUXeXe0DQrg = /*#__PURE__*/ inlinedQrl(test_component_LUXeXe0DQrg, "test_component_LUXeXe0DQrg");
+//
+export default /*#__PURE__*/ componentQrl(_qrl_test_component_LUXeXe0DQrg);
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;AAGA,OAAO,MAAM,cAAc;IAC1B,GAAG;IACH,GAAG;IACH,GAAG;AACH,EAAE;mCAEwB;IAI1B,UAFc,WAAW,CADb,IACkB;AAG9B;AALA,6BAAe,iGAKZ\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;AAGA,OAAO,MAAM,cAAc;IAC1B,GAAG;IACH,GAAG;IACH,GAAG;AACH,EAAE;mCAEwB;IAI1B,UAFc,WAAW,CADb,IACkB;AAG9B;;;;AALA,6BAAe,8CAKZ\"}")
 == DIAGNOSTICS ==
 
 []

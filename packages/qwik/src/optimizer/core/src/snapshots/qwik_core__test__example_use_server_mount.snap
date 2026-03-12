@@ -139,14 +139,14 @@ import { useStore } from "@qwik.dev/core";
 import { useTaskQrl } from "@qwik.dev/core";
 //
 const _qrl_Parent_component_div_q_e_click_zM9okM0TYrA = /*#__PURE__*/ qrl(()=>import("./test.tsx_Parent_component_div_q_e_click_zM9okM0TYrA"), "Parent_component_div_q_e_click_zM9okM0TYrA");
-const i_gDH1EtUWqBU = ()=>import("./test.tsx_Parent_component_useTask_gDH1EtUWqBU");
+const _qrl_Parent_component_useTask_gDH1EtUWqBU = /*#__PURE__*/ qrl(()=>import("./test.tsx_Parent_component_useTask_gDH1EtUWqBU"), "Parent_component_useTask_gDH1EtUWqBU");
 //
 export const Parent_component_0TaiDayHrlo = ()=>{
     const state = useStore({
         text: ''
     });
     // Double count watch
-    useTaskQrl(/*#__PURE__*/ qrl(i_gDH1EtUWqBU, "Parent_component_useTask_gDH1EtUWqBU", [
+    useTaskQrl(_qrl_Parent_component_useTask_gDH1EtUWqBU.$withCaptures$([
         state
     ]));
     return /*#__PURE__*/ _jsxSorted("div", null, {
@@ -211,14 +211,14 @@ import { useStore } from "@qwik.dev/core";
 import { useTaskQrl } from "@qwik.dev/core";
 //
 const _qrl_Child_component_div_q_e_click_cROa4sult1s = /*#__PURE__*/ qrl(()=>import("./test.tsx_Child_component_div_q_e_click_cROa4sult1s"), "Child_component_div_q_e_click_cROa4sult1s");
-const i_Oh4n7ZeqJkU = ()=>import("./test.tsx_Child_component_useTask_Oh4n7ZeqJkU");
+const _qrl_Child_component_useTask_Oh4n7ZeqJkU = /*#__PURE__*/ qrl(()=>import("./test.tsx_Child_component_useTask_Oh4n7ZeqJkU"), "Child_component_useTask_Oh4n7ZeqJkU");
 //
 export const Child_component_9GyF01GDKqw = ()=>{
     const state = useStore({
         text: ''
     });
     // Double count watch
-    useTaskQrl(/*#__PURE__*/ qrl(i_Oh4n7ZeqJkU, "Child_component_useTask_Oh4n7ZeqJkU", [
+    useTaskQrl(_qrl_Child_component_useTask_Oh4n7ZeqJkU.$withCaptures$([
         state
     ]));
     return /*#__PURE__*/ _jsxSorted("div", null, {

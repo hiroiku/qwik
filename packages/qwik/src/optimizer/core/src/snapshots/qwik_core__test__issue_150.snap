@@ -110,17 +110,15 @@ Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"ma
 
 import { qrl } from "@qwik.dev/core";
 //
-const i_krCndSwhX4U = ()=>import("./test.tsx_Greeter_component_1_krCndSwhX4U");
-//
 export const Greeter_component_n7HuG2hhU0Q = ()=>{
     const stuff = useStore();
-    return /*#__PURE__*/ qrl(i_krCndSwhX4U, "Greeter_component_1_krCndSwhX4U", [
+    return /*#__PURE__*/ qrl(()=>import("./test.tsx_Greeter_component_1_krCndSwhX4U"), "Greeter_component_1_krCndSwhX4U", [
         stuff
     ]);
 };
 
 
-Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;;;6CAIkC;IACjC,MAAM,QAAQ;IACd;;;AAWD\"}")
+Some("{\"version\":3,\"sources\":[\"/user/qwik/src/test.tsx\"],\"names\":[],\"mappings\":\";;6CAIkC;IACjC,MAAM,QAAQ;IACd;;;AAWD\"}")
 /*
 {
   "origin": "test.tsx",

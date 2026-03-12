@@ -118,8 +118,8 @@ import { _jsxSorted } from "@qwik.dev/core";
 import { qrl } from "@qwik.dev/core";
 import { useSignal } from "@qwik.dev/core";
 //
-const i_2iHUE4xtgo8 = ()=>import("./test.tsx_test_component_div_div_q_e_hover_2iHUE4xtgo8");
-const i_Mc600uqO6ps = ()=>import("./test.tsx_test_component_div_div_q_e_click_Mc600uqO6ps");
+const _qrl_test_component_div_div_q_e_click_Mc600uqO6ps = /*#__PURE__*/ qrl(()=>import("./test.tsx_test_component_div_div_q_e_click_Mc600uqO6ps"), "test_component_div_div_q_e_click_Mc600uqO6ps");
+const _qrl_test_component_div_div_q_e_hover_2iHUE4xtgo8 = /*#__PURE__*/ qrl(()=>import("./test.tsx_test_component_div_div_q_e_hover_2iHUE4xtgo8"), "test_component_div_div_q_e_hover_2iHUE4xtgo8");
 //
 export const test_component_LUXeXe0DQrg = ()=>{
     const foo = useSignal('hi');
@@ -128,10 +128,10 @@ export const test_component_LUXeXe0DQrg = ()=>{
         'abcd',
         'xyz'
     ];
-    const test_component_div_div_q_e_click_Mc600uqO6ps = /*#__PURE__*/ qrl(i_Mc600uqO6ps, "test_component_div_div_q_e_click_Mc600uqO6ps", [
+    const test_component_div_div_q_e_click_Mc600uqO6ps = _qrl_test_component_div_div_q_e_click_Mc600uqO6ps.$withCaptures$([
         foo
     ]);
-    const test_component_div_div_q_e_hover_2iHUE4xtgo8 = /*#__PURE__*/ qrl(i_2iHUE4xtgo8, "test_component_div_div_q_e_hover_2iHUE4xtgo8", [
+    const test_component_div_div_q_e_hover_2iHUE4xtgo8 = _qrl_test_component_div_div_q_e_hover_2iHUE4xtgo8.$withCaptures$([
         bar
     ]);
     return /*#__PURE__*/ _jsxSorted("div", null, null, loop.map((item, index)=>{

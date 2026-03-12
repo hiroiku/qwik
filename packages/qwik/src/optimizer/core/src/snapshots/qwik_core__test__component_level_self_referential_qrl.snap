@@ -36,16 +36,16 @@ export const Foo = component$((props) => {
 import { qrl } from "@qwik.dev/core";
 import { useAsyncQrl } from "@qwik.dev/core";
 //
-const i_f0BGwWm4eeY = ()=>import("./test.tsx_Foo_component_sig_useAsync_f0BGwWm4eeY");
-const i_fsHooibmyyE = ()=>import("./test.tsx_Foo_component_other_useAsync_fsHooibmyyE");
+const _qrl_Foo_component_other_useAsync_fsHooibmyyE = /*#__PURE__*/ qrl(()=>import("./test.tsx_Foo_component_other_useAsync_fsHooibmyyE"), "Foo_component_other_useAsync_fsHooibmyyE");
+const _qrl_Foo_component_sig_useAsync_f0BGwWm4eeY = /*#__PURE__*/ qrl(()=>import("./test.tsx_Foo_component_sig_useAsync_f0BGwWm4eeY"), "Foo_component_sig_useAsync_f0BGwWm4eeY");
 //
 export const Foo_component_HTDRsvUbLiE = (props)=>{
     const _ref = {};
-    _ref.sig = useAsyncQrl(/*#__PURE__*/ qrl(i_f0BGwWm4eeY, "Foo_component_sig_useAsync_f0BGwWm4eeY", [
+    _ref.sig = useAsyncQrl(_qrl_Foo_component_sig_useAsync_f0BGwWm4eeY.$withCaptures$([
         _ref.sig
     ]));
     const { sig } = _ref;
-    _ref.other = useAsyncQrl(/*#__PURE__*/ qrl(i_fsHooibmyyE, "Foo_component_other_useAsync_fsHooibmyyE", [
+    _ref.other = useAsyncQrl(_qrl_Foo_component_other_useAsync_fsHooibmyyE.$withCaptures$([
         _ref.other
     ]));
     const { other } = _ref;
