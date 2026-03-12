@@ -12,7 +12,7 @@ import { isPromise, maybeThen } from '../utils/promises';
 import { qDev, qSerialize, qTest, seal } from '../utils/qdev';
 import { isFunction, type ValueOrPromise } from '../utils/types';
 import type { QRLDev } from './qrl';
-import { SYNC_QRL } from './qrl-utils';
+import { getSymbolHash, SYNC_QRL } from './qrl-utils';
 import type { QRL, QrlArgs, QrlReturn } from './qrl.public';
 // @ts-expect-error we don't have types for the preloader
 import { p as preload } from '@qwik.dev/core/preloader';
@@ -35,7 +35,7 @@ export type QRLInternalMethods<TYPE> = {
   readonly $hash$: string;
 
   /** If it's a string it's serialized */
-  readonly $captures$: Readonly<unknown[]> | string | null;
+  readonly $captures$?: Readonly<unknown[]> | string | null;
   dev?: QRLDev | null;
 
   resolve(container?: Container): Promise<TYPE>;
@@ -55,6 +55,8 @@ export type QRLInternalMethods<TYPE> = {
 
   $callFn$(withThis: unknown, ...args: QrlArgs<TYPE>): ValueOrPromise<QrlReturn<TYPE>>;
 
+  $withCaptures$(captures: Readonly<unknown[]> | string | null): QRLInternal<TYPE>;
+
   /**
    * Needed for deserialization and importing. We don't always have the container while creating
    * qrls in async sections of code
@@ -63,9 +65,97 @@ export type QRLInternalMethods<TYPE> = {
   $setContainer$(container: Container): void;
   $setDev$(dev: QRLDev): void;
 
+  /** The shared lazy-loading reference */
+  readonly $lazy$: LazyRef<TYPE>;
+
   /** Only in dev mode */
   $origSymbolRef$?: null | ValueOrPromise<TYPE>;
 };
+
+/**
+ * Shared lazy-loading reference that holds module loading metadata. Multiple QRLs pointing to the
+ * same chunk+symbol can share a single LazyRef, differing only in their captured scope.
+ */
+export class LazyRef<TYPE = unknown> {
+  $ref$?: null | ValueOrPromise<TYPE>;
+  // Don't allocate dev property immediately so that in prod we don't have this property
+  dev?: QRLDev | null | undefined;
+  $origSymbolRef$?: null | ValueOrPromise<TYPE>;
+
+  constructor(
+    readonly $chunk$: string | null,
+    readonly $symbol$: string,
+    readonly $symbolFn$: undefined | null | (() => Promise<Record<string, TYPE>>),
+    $ref$?: null | ValueOrPromise<TYPE>,
+    public $container$?: Container | null
+  ) {
+    // Retrieve memoized result from symbolFn
+    if ($symbolFn$ && !$ref$ && $symbol$ in $symbolFn$) {
+      $ref$ = ($symbolFn$ as any)[$symbol$];
+    }
+    if ($ref$) {
+      this.$setRef$($ref$);
+    }
+
+    /** Preload the chunk with somewhat lower probability when we create the QRL. */
+    if (isBrowser && $chunk$) {
+      preload($chunk$, 0.8);
+    }
+  }
+
+  /** We don't read hash very often so let's not allocate a string for every QRL */
+  get $hash$(): string {
+    return getSymbolHash(this.$symbol$);
+  }
+
+  $setRef$(ref: ValueOrPromise<TYPE>) {
+    this.$ref$ = ref;
+    if (isPromise(ref)) {
+      ref.then(
+        (r) => (this.$ref$ = r),
+        (err) => {
+          console.error(`qrl ${this.$symbol$} failed to load`, err);
+          // We shouldn't cache rejections, we can try again later
+          this.$ref$ = null;
+        }
+      );
+    }
+  }
+
+  /** Load the raw module export without capture binding. */
+  $load$(): ValueOrPromise<TYPE> {
+    if (this.$ref$ != null) {
+      return this.$ref$;
+    }
+
+    if (this.$chunk$ === '') {
+      // Sync QRL
+      isDev && assertDefined(this.$container$, 'Sync QRL must have container element');
+      const hash = (this.$container$ as DomContainer).$instanceHash$;
+      const doc = (this.$container$ as DomContainer).element?.ownerDocument || document;
+      const qFuncs = getQFuncs(doc, hash);
+      return (this.$ref$ = qFuncs[Number(this.$symbol$)] as TYPE);
+    }
+
+    if (isBrowser && this.$chunk$) {
+      /** We will run the QRL, so now the probability of the chunk is 100% */
+      preload(this.$chunk$, 1);
+    }
+
+    const symbol = this.$symbol$;
+    const importP: Promise<TYPE> = this.$symbolFn$
+      ? this.$symbolFn$().then((module) => module[symbol] as TYPE)
+      : (getPlatform().importSymbol(
+          (this.$container$ as DomContainer | null)?.element,
+          this.$chunk$,
+          symbol
+        ) as Promise<TYPE>);
+
+    this.$setRef$(importP);
+
+    return this.$ref$ as TYPE;
+  }
+}
 
 /**
  * When a method is called on the qrlFn wrapper function, `this` is the function, not the QRLClass
@@ -92,147 +182,83 @@ const getInstance = <TYPE>(instance: any): QRLClass<TYPE> => {
  * doesn't have access to it, and it uses more memory.
  */
 class QRLClass<TYPE> extends Function implements QRLInternalMethods<TYPE> {
+  resolved: undefined | TYPE = undefined;
+  // This is defined or undefined for the lifetime of the QRL, so we set it lazily
+  $captures$?: Readonly<unknown[]> | string | null;
+
   constructor(
-    readonly $chunk$: string | null,
-    readonly $symbol$: string,
-    readonly $symbolFn$: undefined | null | (() => Promise<Record<string, TYPE>>),
-    private $ref$: undefined | null | ValueOrPromise<TYPE>,
-    public $captures$: Readonly<unknown[]> | string | null,
-    public $container$: Container | null | undefined
+    readonly $lazy$: LazyRef<TYPE>,
+    $captures$?: Readonly<unknown[]> | string | null
   ) {
     super();
-    // Retrieve memoized result from symbolFn
-    if ($symbolFn$ && !$ref$ && $symbol$ in $symbolFn$) {
-      this.$ref$ = ($symbolFn$ as any)[$symbol$];
+    if ($captures$) {
+      this.$captures$ = $captures$;
     }
 
-    // resolve/wrap the symbolRef if we received it. If it is a plain value without computed captures, the qrl will be resolved immediately.
-    if (this.$ref$ != null) {
-      this.$ref$ = maybeThen(ensureQrlCaptures(this), () =>
-        maybeThen(this.$ref$, (resolved) => {
-          this.$ref$ = this.resolved = bindCaptures(this, resolved as TYPE);
-          return this.$ref$;
-        })
-      );
-    }
-
-    /** Preload the chunk with somewhat lower probability when we create the QRL. */
-    if (isBrowser && $chunk$) {
-      preload($chunk$, 0.8);
+    // If it is a plain value without computed captures, the qrl will be resolved immediately.
+    if ($lazy$.$ref$ != null && typeof this.$captures$ !== 'string') {
+      $resolve$(this, $lazy$.$container$);
     }
   }
 
-  resolved: undefined | TYPE = undefined;
-  $hashIndex$: number | null = null;
-  // Don't allocate dev property immediately so that in prod we don't have this property
-  dev?: QRLDev | null | undefined;
+  $withCaptures$(captures: Readonly<unknown[]> | string | null): QRLInternal<TYPE> {
+    const newQrl = new QRLClass<TYPE>(this.$lazy$, captures!);
+    return makeQrlFn(newQrl);
+  }
+
+  // --- Getter proxies for backward compat ---
+  get $chunk$(): string | null {
+    return this.$lazy$.$chunk$;
+  }
+  get $symbol$(): string {
+    return this.$lazy$.$symbol$;
+  }
+  get $hash$(): string {
+    return this.$lazy$.$hash$;
+  }
+  get $container$(): Container | null | undefined {
+    return this.$lazy$.$container$;
+  }
+  get dev(): QRLDev | null | undefined {
+    return this.$lazy$.dev;
+  }
+  get $origSymbolRef$(): null | ValueOrPromise<TYPE> | undefined {
+    return this.$lazy$.$origSymbolRef$;
+  }
 
   $setContainer$(container: Container): void {
-    getInstance(this).$container$ = container;
+    this.$lazy$.$container$ = container;
   }
 
   $setDev$(dev: QRLDev): void {
-    getInstance(this).dev = dev;
+    this.$lazy$.dev = dev;
   }
 
   $callFn$(withThis: unknown, ...args: QrlArgs<TYPE>): ValueOrPromise<QrlReturn<TYPE>> {
-    const qrl = getInstance<TYPE>(this);
-    if (qrl.resolved) {
-      return (qrl.resolved as any).apply(withThis, args);
+    if (this.resolved) {
+      return (this.resolved as any).apply(withThis, args);
     }
 
-    // Not resolved yet, return a promise
+    // Not resolved yet: we'll return a promise
 
     // grab the context while we are sync
     const ctx = tryGetInvokeContext();
 
-    return qrl
-      .resolve(ctx?.$container$)
-      .then(() => invokeApply.call(withThis, ctx, qrl.resolved as any, args));
+    return this.resolve(ctx?.$container$).then(() =>
+      invokeApply.call(withThis, ctx, this.resolved as any, args)
+    );
   }
 
   async resolve(container?: Container): Promise<TYPE> {
+    // We need to write to the QRLClass instance, not the function
     const qrl = getInstance<TYPE>(this);
-    if (container) {
-      qrl.$container$ = container;
-    } else if (!qrl.$container$) {
-      qrl.$container$ = tryGetInvokeContext()?.$container$ as Container;
-    }
-
-    if (qrl.$ref$ != null) {
-      // Resolving (Promise) or already resolved (value)
-      return qrl.$ref$;
-    }
-
-    if (qrl.$chunk$ === '') {
-      // Sync QRL
-      isDev && assertDefined(qrl.$container$, 'Sync QRL must have container element');
-      const hash = (qrl.$container$ as DomContainer).$instanceHash$;
-      const doc = (qrl.$container$ as DomContainer).element?.ownerDocument || document;
-      const qFuncs = getQFuncs(doc, hash);
-      // No need to wrap, syncQRLs can't have captured scope
-      return (qrl.resolved = qrl.$ref$ = qFuncs[Number(qrl.$symbol$)] as TYPE);
-    }
-
-    if (isBrowser && qrl.$chunk$) {
-      /** We will run the QRL, so now the probability of the chunk is 100% */
-      preload(qrl.$chunk$, 1);
-    }
-
-    const start = now();
-    const symbol = qrl.$symbol$;
-    const importP = qrl.$symbolFn$
-      ? qrl.$symbolFn$().then((module) => module[symbol] as TYPE)
-      : getPlatform().importSymbol(
-          (qrl.$container$ as DomContainer | null)?.element,
-          qrl.$chunk$,
-          symbol
-        );
-
-    qrl.$ref$ = maybeThen(importP, (resolved) => {
-      // We memoize the result on the symbolFn
-      // Make sure not to memoize the wrapped function!
-      if (qrl.$symbolFn$) {
-        (qrl.$symbolFn$ as any)[symbol] = resolved;
-      }
-      return (qrl.$ref$ = qrl.resolved = bindCaptures(qrl, resolved as TYPE));
-    });
-
-    if (isPromise(qrl.$ref$)) {
-      const ctx = tryGetInvokeContext();
-      qrl.$ref$.then(
-        () =>
-          emitUsedSymbol(
-            symbol,
-            ctx?.$hostElement$ instanceof ElementVNode ? ctx?.$hostElement$.node : undefined,
-            start
-          ),
-        (err) => {
-          console.error(`qrl ${symbol} failed to load`, err);
-          // We shouldn't cache rejections, we can try again later
-          qrl.$ref$ = null;
-        }
-      );
-    }
-
-    // Try to deserialize captures if any
-    if (qrl.$container$) {
-      await ensureQrlCaptures(qrl);
-    }
-
-    return qrl.$ref$ as TYPE;
+    return maybeThen($resolve$(qrl, container), () => qrl.resolved!);
   }
 
   getSymbol(): string {
     return this.$symbol$;
   }
 
-  /** We don't read hash very often so let's not allocate a string for every QRL */
-  get $hash$(): string {
-    const qrl = getInstance(this);
-    qrl.$hashIndex$ ??= qrl.$symbol$.lastIndexOf('_') + 1;
-    return qrl.$symbol$.slice(qrl.$hashIndex$);
-  }
   getHash(): string {
     return this.$hash$;
   }
@@ -251,17 +277,17 @@ class QRLClass<TYPE> extends Function implements QRLInternalMethods<TYPE> {
     : // unknown instead of never so we allow assigning function QRLs to any
       unknown {
     const qrl = getInstance(this);
-    const bound = (...args: QrlArgs<TYPE>): any => {
+    const bound = (...args: QrlArgs<TYPE>): unknown => {
       if (!qrl.resolved) {
         return qrl.resolve().then((fn) => {
           if (qDev && !isFunction(fn)) {
             throw qError(QError.qrlIsNotFunction);
           }
           return bound(...args);
-        }) as any;
+        });
       }
       if (beforeFn && beforeFn() === false) {
-        return undefined as any;
+        return undefined;
       }
       return invokeApply(currentCtx, qrl.resolved as any, args);
     };
@@ -293,12 +319,13 @@ export const deserializeCaptures = (container: Container, captures: string) => {
 const ensureQrlCaptures = (qrl: QRLClass<unknown>) => {
   // We read the captures once, synchronously, so no need to keep previous
   _captures = qrl.$captures$ as any;
+  const container = qrl.$container$;
   if (typeof _captures === 'string') {
-    if (!qrl.$container$) {
+    if (!container) {
       throw qError(QError.qrlMissingContainer);
     }
     const prevLoading = loading;
-    _captures = qrl.$captures$ = deserializeCaptures(qrl.$container$, _captures);
+    _captures = qrl.$captures$ = deserializeCaptures(container, _captures);
     if (loading !== prevLoading) {
       // return the loading promise so callers can await it
       return loading;
@@ -315,6 +342,51 @@ const bindCaptures = <TYPE>(qrl: QRLClass<unknown>, fn: TYPE): TYPE => {
     ensureQrlCaptures(qrl);
     return fn.apply(this, args);
   } as TYPE;
+};
+
+const $resolve$ = <TYPE>(
+  qrl: QRLClass<TYPE>,
+  container?: Container | null
+): ValueOrPromise<void> => {
+  const lazy = qrl.$lazy$;
+
+  if (container) {
+    lazy.$container$ = container;
+  } else if (!lazy.$container$) {
+    lazy.$container$ = tryGetInvokeContext()?.$container$ as Container;
+  }
+
+  if (qrl.resolved) {
+    return;
+  }
+
+  // Capture context while still sync
+  const start = now();
+  const ctx = tryGetInvokeContext();
+
+  // Load raw value via LazyRef - may be sync (e.g. sync QRLs) or async
+  const rawOrPromise = lazy.$load$();
+
+  const maybePromise = maybeThen(rawOrPromise, (raw) => {
+    qrl.resolved = bindCaptures(qrl, raw);
+  });
+
+  if (maybePromise) {
+    // Emit symbol usage event
+    const symbol = lazy.$symbol$;
+    emitUsedSymbol(
+      symbol,
+      ctx?.$hostElement$ instanceof ElementVNode ? ctx?.$hostElement$.node : undefined,
+      start
+    );
+  }
+
+  const capturedPromise = lazy.$container$ && ensureQrlCaptures(qrl);
+
+  if (capturedPromise) {
+    return capturedPromise.then(() => maybePromise);
+  }
+  return maybePromise;
 };
 
 /**
@@ -349,21 +421,26 @@ export const createQRL = <TYPE>(
     }
   }
 
-  const qrl = new QRLClass<TYPE>(chunk, symbol, symbolFn, symbolRef, captures!, container);
+  const lazy = new LazyRef<TYPE>(chunk, symbol, symbolFn, symbolRef, container);
+  const qrl = new QRLClass<TYPE>(lazy, captures!);
   if (qDev) {
     // we'll fill this in later
-    qrl.dev = null;
-    (qrl as QRLInternalMethods<TYPE>).$origSymbolRef$ = origSymbolRef;
+    lazy.dev = null;
+    lazy.$origSymbolRef$ = origSymbolRef;
+    seal(lazy);
     seal(qrl);
   }
 
+  return makeQrlFn(qrl);
+};
+
+const makeQrlFn = <TYPE>(qrl: QRLClass<TYPE>): QRLInternal<TYPE> => {
   // The QRL has to be callable, so we create a function that calls the internal $callFn$
-  const qrlFn: QRLInternal<TYPE> = async function qrlFn(this: unknown, ...args: QrlArgs<TYPE>) {
+  const qrlFn: QRLInternal<TYPE> = async function (this: unknown, ...args: QrlArgs<TYPE>) {
     return qrl.$callFn$(this, ...args);
   } as QRLInternal<TYPE>;
   // ...and set the prototype to the QRL instance so it has all the properties and methods without copying them
   Object.setPrototypeOf(qrlFn, qrl);
-
   return qrlFn;
 };
 
