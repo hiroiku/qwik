@@ -342,6 +342,12 @@ export const _dumpState: (state: unknown[], color?: boolean, prefix?: string, li
 export const Each: Component<EachProps<any>>;
 
 // @internal (undocumented)
+export const _Each_component_useTask_1IvuA9ZneGc: (input: TaskCtx) => Promise<void>;
+
+// @internal (undocumented)
+export const _Each_component_zi6m0DQBsr8: (props: EachProps<any>) => JSXNode<unknown>;
+
+// @internal (undocumented)
 export const _EFFECT_BACK_REF: unique symbol;
 
 // @internal (undocumented)

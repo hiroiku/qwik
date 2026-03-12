@@ -389,5 +389,5 @@ export async function executeReconcile(
       (item: any) => JSXOutput
     >
   ).resolve()) as (item: any) => JSXOutput;
-  reconcileKeyedLoopToParent(container, journal, host, cursor, items, keyOf, itemFn);
+  await reconcileKeyedLoopToParent(container, journal, host, cursor, items, keyOf, itemFn);
 }

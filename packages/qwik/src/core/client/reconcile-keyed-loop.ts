@@ -31,17 +31,76 @@ function collectCurrentKeyedChildren(parent: VirtualVNode): KeyedRowVNode[] {
   return rows;
 }
 
+// Reused rows that belong to the LIS can stay where they are; everything else needs to move.
+function getStableRowMask(oldIndexes: ArrayLike<number>): Uint8Array {
+  const stableRows = new Uint8Array(oldIndexes.length);
+  const predecessors = new Int32Array(oldIndexes.length);
+  predecessors.fill(-1);
+  const lis = new Int32Array(oldIndexes.length);
+  let lisLength = 0;
+  let lastOldIndex = -1;
+  let isIncreasing = true;
+
+  for (let i = 0; i < oldIndexes.length; i++) {
+    const oldIndex = oldIndexes[i];
+    if (oldIndex < 0) {
+      continue;
+    }
+
+    if (oldIndex <= lastOldIndex) {
+      isIncreasing = false;
+    } else {
+      lastOldIndex = oldIndex;
+    }
+
+    let low = 0;
+    let high = lisLength;
+
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      const lisIndex = lis[mid];
+      if (oldIndexes[lisIndex] < oldIndex) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+
+    if (low > 0) {
+      predecessors[i] = lis[low - 1];
+    }
+
+    lis[low] = i;
+    if (low === lisLength) {
+      lisLength++;
+    }
+  }
+
+  if (isIncreasing) {
+    for (let i = 0; i < oldIndexes.length; i++) {
+      if (oldIndexes[i] >= 0) {
+        stableRows[i] = 1;
+      }
+    }
+    return stableRows;
+  }
+
+  let current = lisLength > 0 ? lis[lisLength - 1] : -1;
+  while (current !== -1) {
+    stableRows[current] = 1;
+    current = predecessors[current];
+  }
+
+  return stableRows;
+}
+
 function placeRow(
   journal: VNodeJournal,
   parent: ElementVNode | VirtualVNode,
   vnode: KeyedRowVNode,
   anchor: VNode | null
 ): void {
-  const alreadyInPlace = anchor ? vnode.nextSibling === anchor : parent.lastChild === vnode;
-
-  if (!alreadyInPlace) {
-    vnode_insertBefore(journal, parent, vnode, anchor);
-  }
+  vnode_insertBefore(journal, parent, vnode, anchor);
 }
 
 export async function reconcileKeyedLoopToParent<T>(
@@ -55,24 +114,43 @@ export async function reconcileKeyedLoopToParent<T>(
 ): Promise<void> {
   const oldRows = collectCurrentKeyedChildren(parent);
   const oldByKey = new Map<Key, KeyedRowVNode>();
+  const oldIndexByKey = new Map<Key, number>();
 
-  for (const row of oldRows) {
+  for (let i = 0; i < oldRows.length; i++) {
+    const row = oldRows[i];
     if (row.key == null) {
       continue;
     }
     oldByKey.set(row.key, row);
+    oldIndexByKey.set(row.key, i);
   }
+
+  const keys = new Array<Key>(items.length);
+  const oldIndexes = new Int32Array(items.length);
+  oldIndexes.fill(-1);
+  for (let i = 0; i < items.length; i++) {
+    const key = keyOf(items[i], i);
+    keys[i] = key;
+    const oldIndex = oldIndexByKey.get(key);
+    if (oldIndex !== undefined) {
+      oldIndexes[i] = oldIndex;
+    }
+  }
+  const stableRows = getStableRowMask(oldIndexes);
 
   let anchor: VNode | null = null;
 
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i];
-    const key = keyOf(item, i);
+    const key = keys[i];
 
     const reused = oldByKey.get(key) ?? null;
     if (reused) {
       oldByKey.delete(key);
-      placeRow(journal, parent, reused, anchor);
+      if (stableRows[i] === 0) {
+        placeRow(journal, parent, reused, anchor);
+      }
+      anchor = reused;
     } else {
       const jsx = renderItem(item, i);
 
@@ -90,9 +168,8 @@ export async function reconcileKeyedLoopToParent<T>(
         cursor,
         null
       );
+      anchor = (anchor ? anchor.previousSibling : parent.lastChild) ?? null;
     }
-
-    anchor = (anchor ? anchor.previousSibling : parent.lastChild) ?? null;
   }
 
   for (const leftover of oldByKey.values()) {

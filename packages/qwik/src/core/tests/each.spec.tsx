@@ -43,6 +43,53 @@ describe.each([
     );
   });
 
+  it('should render long each item', async () => {
+    const Cmp = component$(() => {
+      return (
+        <div id="loop">
+          <Each
+            items={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
+            key$={(item) => item}
+            item$={(item) => <div>Hello {item}</div>}
+          />
+        </div>
+      );
+    });
+    const { vNode, document } = await render(<Cmp />, { debug });
+    expect(vNode).toMatchVDOM(
+      <Component>
+        <div id="loop">
+          <Component>
+            <div>Hello a</div>
+            <div>Hello b</div>
+            <div>Hello c</div>
+            <div>Hello d</div>
+            <div>Hello e</div>
+            <div>Hello f</div>
+            <div>Hello g</div>
+            <div>Hello h</div>
+            <div>Hello i</div>
+            <div>Hello j</div>
+          </Component>
+        </div>
+      </Component>
+    );
+    await expect(document.querySelector('#loop')).toMatchDOM(
+      <div id="loop">
+        <div>Hello a</div>
+        <div>Hello b</div>
+        <div>Hello c</div>
+        <div>Hello d</div>
+        <div>Hello e</div>
+        <div>Hello f</div>
+        <div>Hello g</div>
+        <div>Hello h</div>
+        <div>Hello i</div>
+        <div>Hello j</div>
+      </div>
+    );
+  });
+
   it('should update each item', async () => {
     const Cmp = component$(() => {
       const items = useSignal(['a', 'b', 'c']);
