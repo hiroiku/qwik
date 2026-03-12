@@ -1,9 +1,11 @@
-import { _jsxSorted } from '@qwik.dev/core';
+import { _jsxSorted, Fragment } from '@qwik.dev/core';
 import { vnode_fromJSX } from '@qwik.dev/core/testing';
 import { describe, expect, it } from 'vitest';
 import { _flushJournal } from '../shared/cursor/cursor-flush';
 import type { Cursor } from '../shared/cursor/cursor';
 import type { ElementVNode } from '../shared/vnode/element-vnode';
+import { RemoveAllChildrenOperation } from '../shared/vnode/types/dom-vnode-operation';
+import type { VirtualVNode } from '../shared/vnode/virtual-vnode';
 import { reconcileKeyedLoopToParent } from './reconcile-keyed-loop';
 import type { VNodeJournal } from './vnode-utils';
 
@@ -37,5 +39,40 @@ describe('reconcile-keyed-loop', () => {
     expect(
       Array.from(container.document.querySelectorAll('b')).map((node) => node.textContent)
     ).toEqual(nextItems);
+  });
+
+  it('should remove keyed children inside a virtual parent with a single remove-all operation', async () => {
+    const initialItems = ['0', '1', '2'];
+    const { vNode, container } = vnode_fromJSX(
+      _jsxSorted(
+        'table',
+        {},
+        null,
+        [_jsxSorted(Fragment, {}, null, initialItems.map(createRow), 0, null)],
+        0,
+        'KA_root'
+      )
+    );
+    const parent = (vNode as ElementVNode).firstChild as VirtualVNode;
+    const journal: VNodeJournal = [];
+
+    await reconcileKeyedLoopToParent(
+      container,
+      journal,
+      parent,
+      null as unknown as Cursor,
+      [],
+      (item) => item,
+      (item) => createRow(item)
+    );
+
+    expect(journal).toHaveLength(1);
+    expect(journal[0]).toBeInstanceOf(RemoveAllChildrenOperation);
+    expect((journal[0] as RemoveAllChildrenOperation).target).toBe((vNode as ElementVNode).node);
+
+    _flushJournal(journal);
+
+    expect(container.document.querySelectorAll('b')).toHaveLength(0);
+    expect(container.document.querySelector('table')?.innerHTML).toBe('');
   });
 });

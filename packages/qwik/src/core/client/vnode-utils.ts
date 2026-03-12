@@ -1388,9 +1388,18 @@ export const vnode_truncate = (
     if (vnode_isElementOrTextVNode(vParent)) {
       addVNodeOperation(journal, createRemoveAllChildrenOperation(vParent.node!));
     } else {
-      vnode_walkDirectChildren(journal, vParent, (vNode) => {
-        addVNodeOperation(journal, createDeleteOperation(vNode.node!));
-      });
+      const domParentVNode = vnode_getDomParentVNode(vParent, false);
+      if (
+        domParentVNode &&
+        domParentVNode.firstChild === vParent &&
+        domParentVNode.lastChild === vParent
+      ) {
+        addVNodeOperation(journal, createRemoveAllChildrenOperation(parent));
+      } else {
+        vnode_walkDirectChildren(journal, vParent, (vNode) => {
+          addVNodeOperation(journal, createDeleteOperation(vNode.node!));
+        });
+      }
     }
   }
   const vPrevious = vDelete.previousSibling;
