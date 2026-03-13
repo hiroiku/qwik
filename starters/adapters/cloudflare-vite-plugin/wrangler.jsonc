@@ -1,0 +1,11 @@
+{
+  "name": "qwik-cloudflare-app",
+  "compatibility_date": "2026-02-05",
+  "compatibility_flags": ["nodejs_compat"],
+  // Entry point for the Worker. The Cloudflare Vite Plugin transforms this file at build time.
+  "main": "src/entry.worker.tsx",
+  "assets": {
+    // Client-side assets produced by the Vite client build.
+    "directory": "dist/client",
+  },
+}

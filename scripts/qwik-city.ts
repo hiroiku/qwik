@@ -15,6 +15,7 @@ export async function buildQwikCity(config: BuildConfig) {
     buildVite(config),
     buildAdapterAzureSwaVite(config),
     buildAdapterCloudflarePagesVite(config),
+    buildAdapterCloudflareVitePluginVite(config),
     buildAdapterCloudRunVite(config),
     buildAdapterDenoVite(config),
     buildAdapterBunVite(config),
@@ -211,6 +212,46 @@ async function buildAdapterCloudflarePagesVite(config: BuildConfig) {
   await build({
     entryPoints,
     outfile: join(config.distQwikCityPkgDir, 'adapters', 'cloudflare-pages', 'vite', 'index.cjs'),
+    bundle: true,
+    platform: 'node',
+    target: nodeTarget,
+    format: 'cjs',
+    external: ADAPTER_EXTERNALS,
+    plugins: [resolveAdapterShared('../../shared/vite/index.cjs')],
+  });
+}
+
+async function buildAdapterCloudflareVitePluginVite(config: BuildConfig) {
+  const entryPoints = [
+    join(config.srcQwikCityDir, 'adapters', 'cloudflare-vite-plugin', 'vite', 'index.ts'),
+  ];
+
+  await build({
+    entryPoints,
+    outfile: join(
+      config.distQwikCityPkgDir,
+      'adapters',
+      'cloudflare-vite-plugin',
+      'vite',
+      'index.mjs'
+    ),
+    bundle: true,
+    platform: 'node',
+    target: nodeTarget,
+    format: 'esm',
+    external: ADAPTER_EXTERNALS,
+    plugins: [resolveAdapterShared('../../shared/vite/index.mjs')],
+  });
+
+  await build({
+    entryPoints,
+    outfile: join(
+      config.distQwikCityPkgDir,
+      'adapters',
+      'cloudflare-vite-plugin',
+      'vite',
+      'index.cjs'
+    ),
     bundle: true,
     platform: 'node',
     target: nodeTarget,

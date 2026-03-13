@@ -63,6 +63,11 @@
       "import": "./lib/adapters/cloudflare-pages/vite/index.mjs",
       "require": "./lib/adapters/cloudflare-pages/vite/index.cjs"
     },
+    "./adapters/cloudflare-vite-plugin/vite": {
+      "types": "./lib/adapters/cloudflare-vite-plugin/vite/index.d.ts",
+      "import": "./lib/adapters/cloudflare-vite-plugin/vite/index.mjs",
+      "require": "./lib/adapters/cloudflare-vite-plugin/vite/index.cjs"
+    },
     "./adapters/cloud-run/vite": {
       "types": "./lib/adapters/cloud-run/vite/index.d.ts",
       "import": "./lib/adapters/cloud-run/vite/index.mjs",

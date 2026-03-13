@@ -1,0 +1,32 @@
+{
+  "description": "Cloudflare Workers via @cloudflare/vite-plugin",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.0.0",
+    "wrangler": "^4.0.0"
+  },
+  "__qwik__": {
+    "priority": 41,
+    "displayName": "Adapter: Cloudflare Workers (Vite Plugin)",
+    "docs": [
+      "https://qwik.dev/deployments/cloudflare-pages/",
+      "https://developers.cloudflare.com/workers/",
+      "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin"
+    ],
+    "nextSteps": {
+      "title": "Next Steps",
+      "lines": [
+        "Now you can build and deploy to Cloudflare Workers with:",
+        "",
+        "- npm run dev: start dev server with Cloudflare Workers environment (workerd)",
+        "- npm run build: production build",
+        "- npm run deploy: deploy to Cloudflare Workers via wrangler"
+      ]
+    }
+  }
+}

@@ -12,6 +12,9 @@
       "@builder.io/qwik-city/adapters/cloudflare-pages/vite": [
         "packages/qwik-city/src/adapters/cloudflare-pages/vite/index.ts"
       ],
+      "@builder.io/qwik-city/adapters/cloudflare-vite-plugin/vite": [
+        "packages/qwik-city/src/adapters/cloudflare-vite-plugin/vite/index.ts"
+      ],
       "@builder.io/qwik-city/adapters/node-server/vite": [
         "packages/qwik-city/src/adapters/node-server/vite/index.ts"
       ],

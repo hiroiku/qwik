@@ -39,6 +39,7 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
   let qwikPlugin: QwikVitePlugin | null;
   let ssrFormat: 'esm' | 'cjs' = 'esm';
   let outDir: string | null = null;
+  let hasCloudflareVitePlugin = false;
 
   // Patch Stream APIs
   patchGlobalThis();
@@ -84,6 +85,8 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
     },
 
     async configResolved(config) {
+      hasCloudflareVitePlugin = config.plugins.some((p) => p.name === 'vite-plugin-cloudflare');
+
       Object.assign(process.env, loadEnv(config.mode, process.cwd(), ''));
       rootDir = resolve(config.root);
 
@@ -121,6 +124,12 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
         if (!ctx.isDevServer) {
           // preview server: serve static files from the dist directory
           server.middlewares.use(staticDistMiddleware(server));
+        }
+        // When @cloudflare/vite-plugin is present, SSR requests are handled by
+        // the Cloudflare dev environment running inside workerd. Skip the
+        // Node.js SSR middleware to avoid conflicts.
+        if (hasCloudflareVitePlugin) {
+          return;
         }
         // qwik city middleware injected BEFORE vite internal middlewares
         // and BEFORE @builder.io/qwik/optimizer/vite middlewares

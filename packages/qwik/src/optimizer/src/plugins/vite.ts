@@ -66,6 +66,7 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
   let viteAssetsDir: string | undefined;
   let srcDir: string | null = null;
   let rootDir: string | null = null;
+  let hasCloudflareVitePlugin = false;
 
   let ssrOutDir: string | null = null;
   const fileFilter: QwikVitePluginOptions['fileFilter'] = qwikViteOpts.fileFilter
@@ -405,6 +406,8 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
     },
 
     async configResolved(config) {
+      hasCloudflareVitePlugin = config.plugins.some((p) => p.name === 'vite-plugin-cloudflare');
+
       basePathname = config.base;
       if (!(basePathname.startsWith('/') && basePathname.endsWith('/'))) {
         // TODO v2: make this an error
@@ -627,6 +630,12 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
       }
 
       if (!qwikViteOpts.csr) {
+        // When @cloudflare/vite-plugin is present, it runs SSR inside workerd.
+        // Skip the Node.js SSR dev server to avoid conflicts.
+        if (hasCloudflareVitePlugin) {
+          return;
+        }
+
         const plugin = async () => {
           const opts = qwikPlugin.getOptions();
           const sys = qwikPlugin.getSys();
