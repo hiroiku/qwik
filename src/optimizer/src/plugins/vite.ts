@@ -474,22 +474,6 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
         (qwikViteOpts as any).devSsrServer = false;
       }
 
-      if (hasCloudflarePlugin) {
-        // Disable esbuild dependency discovery for the SSR/Worker environment.
-        // @cloudflare/vite-plugin sets noDiscovery: false, but pre-bundling causes:
-        // - Edge runtime detection errors (e.g., @prisma/client PrismaClientValidationError)
-        // - Module-scoped Symbol identity breaks on reload (e.g., katagami INTERNALS mismatch)
-        // With noDiscovery: true, modules are loaded through Vite's transform pipeline
-        // which handles CJS→ESM conversion and respects workerd export conditions.
-        // configResolved runs after all plugins' config hooks, so this overrides the
-        // cloudflare plugin's noDiscovery: false setting.
-        const ssrEnvConfig = (config as any).environments?.ssr;
-        if (ssrEnvConfig?.optimizeDeps) {
-          ssrEnvConfig.optimizeDeps.noDiscovery = true;
-          ssrEnvConfig.optimizeDeps.include = [];
-        }
-      }
-
       // Ensure that the final settings are applied
       qwikPlugin.normalizeOptions(qwikViteOpts);
     },

@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170950
+ * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314171303
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1291,7 +1291,7 @@ var QWIK_BINDING_MAP = {
 };
 
 var versions = {
-  qwik: "1.19.0-dev+15b5e49-20260314170950"
+  qwik: "1.19.0-dev+15b5e49-20260314171303"
 };
 
 async function getSystem() {
@@ -3998,13 +3998,6 @@ function qwikVite(qwikViteOpts = {}) {
       const useSourcemap = !!config.build.sourcemap;
       useSourcemap && void 0 === qwikViteOpts.optimizerOptions?.sourcemap && qwikPlugin.setSourceMapSupport(true);
       !("devSsrServer" in qwikViteOpts) && hasCloudflarePlugin && (qwikViteOpts.devSsrServer = false);
-      if (hasCloudflarePlugin) {
-        const ssrEnvConfig = config.environments?.ssr;
-        if (ssrEnvConfig?.optimizeDeps) {
-          ssrEnvConfig.optimizeDeps.noDiscovery = true;
-          ssrEnvConfig.optimizeDeps.include = [];
-        }
-      }
       qwikPlugin.normalizeOptions(qwikViteOpts);
     },
     async buildStart() {
