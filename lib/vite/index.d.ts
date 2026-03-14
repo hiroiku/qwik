@@ -126,9 +126,9 @@ export declare interface QwikCityVitePluginOptions extends Omit<PluginOptions, '
     platform?: Record<string, unknown>;
     imageOptimization?: ImageOptimizationOptions;
     /**
-     * Determines if the Qwik City SSR dev server middleware should be used during development.
-     * Set to `false` when using `@cloudflare/vite-plugin` which provides its own workerd-based
-     * SSR dev server. Defaults to `true`.
+     * Determines if the Qwik City SSR dev server middleware should be used during development. Set to
+     * `false` when using `@cloudflare/vite-plugin` which provides its own workerd-based SSR dev
+     * server. Defaults to `true`.
      */
     devSsrServer?: boolean;
 }

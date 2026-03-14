@@ -62,23 +62,46 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
     enforce: 'pre',
     api,
 
-    async config() {
+    async config(viteConfig) {
+      const hasCloudflarePlugin = ((viteConfig.plugins ?? []) as any[])
+        .flat()
+        .some((p: any) => p?.name === 'vite-plugin-cloudflare');
+
+      const qwikCityModules = [
+        QWIK_CITY,
+        QWIK_CITY_PLAN_ID,
+        QWIK_CITY_ENTRIES_ID,
+        QWIK_CITY_SW_REGISTER,
+      ];
+
       const updatedViteConfig: UserConfig = {
         appType: 'custom',
         optimizeDeps: {
-          exclude: [QWIK_CITY, QWIK_CITY_PLAN_ID, QWIK_CITY_ENTRIES_ID, QWIK_CITY_SW_REGISTER],
+          exclude: qwikCityModules,
         },
         ssr: {
           noExternal: [
-            QWIK_CITY,
-            QWIK_CITY_PLAN_ID,
-            QWIK_CITY_ENTRIES_ID,
-            QWIK_CITY_SW_REGISTER,
+            ...qwikCityModules,
             // We've had reports of bundling issues with zod
             'zod',
           ],
         },
       };
+
+      if (hasCloudflarePlugin) {
+        // Vite 7 Environment API: global optimizeDeps applies to client environment only.
+        // The SSR (Worker) environment managed by @cloudflare/vite-plugin needs its own
+        // optimizeDeps.exclude to prevent esbuild from trying to pre-bundle qwik-city
+        // modules that import virtual modules (@qwik-city-plan, @qwik-city-sw-register).
+        (updatedViteConfig as any).environments = {
+          ssr: {
+            optimizeDeps: {
+              exclude: qwikCityModules,
+            },
+          },
+        };
+      }
+
       return updatedViteConfig;
     },
 
