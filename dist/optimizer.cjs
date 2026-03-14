@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170621
+ * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170950
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1266,7 +1266,7 @@ globalThis.qwikOptimizer = function(module) {
     }
   };
   var versions = {
-    qwik: "1.19.0-dev+15b5e49-20260314170621"
+    qwik: "1.19.0-dev+15b5e49-20260314170950"
   };
   async function getSystem() {
     const sysEnv = getEnv();
@@ -4078,6 +4078,7 @@ globalThis.qwikOptimizer = function(module) {
     };
     const vitePluginClientFallback = {
       name: "vite-plugin-qwik-client-fallback",
+      enforce: "pre",
       async resolveId(id, importer, options) {
         var _a;
         const envName = null == (_a = this.environment) ? void 0 : _a.name;

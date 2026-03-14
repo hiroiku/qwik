@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170621
+ * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170950
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1291,7 +1291,7 @@ var QWIK_BINDING_MAP = {
 };
 
 var versions = {
-  qwik: "1.19.0-dev+15b5e49-20260314170621"
+  qwik: "1.19.0-dev+15b5e49-20260314170950"
 };
 
 async function getSystem() {
@@ -4202,6 +4202,7 @@ function qwikVite(qwikViteOpts = {}) {
   };
   const vitePluginClientFallback = {
     name: "vite-plugin-qwik-client-fallback",
+    enforce: "pre",
     async resolveId(id, importer, options) {
       const envName = this.environment?.name;
       if (!hasCloudflarePlugin || "client" !== envName) {

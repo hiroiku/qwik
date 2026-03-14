@@ -807,6 +807,11 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
   // from the final client bundle.
   const vitePluginClientFallback: VitePlugin<never> = {
     name: 'vite-plugin-qwik-client-fallback',
+    // Must run before Vite core plugins (e.g., vite:commonjs / commonjs--resolver)
+    // which throw instead of returning null for packages with no browser export conditions.
+    // With enforce:'pre', this plugin intercepts the resolution first and catches errors
+    // thrown by downstream plugins via the try-catch in resolveId.
+    enforce: 'pre',
 
     async resolveId(id, importer, options) {
       // Only activate for the client environment when cloudflare plugin is present.
