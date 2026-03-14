@@ -63,6 +63,11 @@
       "import": "./lib/adapters/cloudflare-pages/vite/index.mjs",
       "require": "./lib/adapters/cloudflare-pages/vite/index.cjs"
     },
+    "./adapters/cloudflare-worker/vite": {
+      "types": "./lib/adapters/cloudflare-worker/vite/index.d.ts",
+      "import": "./lib/adapters/cloudflare-worker/vite/index.mjs",
+      "require": "./lib/adapters/cloudflare-worker/vite/index.cjs"
+    },
     "./adapters/cloud-run/vite": {
       "types": "./lib/adapters/cloud-run/vite/index.d.ts",
       "import": "./lib/adapters/cloud-run/vite/index.mjs",
@@ -114,6 +119,10 @@
     "./middleware/cloudflare-pages": {
       "types": "./lib/middleware/cloudflare-pages/index.d.ts",
       "import": "./lib/middleware/cloudflare-pages/index.mjs"
+    },
+    "./middleware/cloudflare-worker": {
+      "types": "./lib/middleware/cloudflare-worker/index.d.ts",
+      "import": "./lib/middleware/cloudflare-worker/index.mjs"
     },
     "./middleware/firebase": {
       "types": "./lib/middleware/firebase/index.d.ts",

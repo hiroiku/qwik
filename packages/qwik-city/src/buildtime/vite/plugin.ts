@@ -69,7 +69,6 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
           exclude: [QWIK_CITY, QWIK_CITY_PLAN_ID, QWIK_CITY_ENTRIES_ID, QWIK_CITY_SW_REGISTER],
         },
         ssr: {
-          external: ['node:async_hooks'],
           noExternal: [
             QWIK_CITY,
             QWIK_CITY_PLAN_ID,
@@ -111,6 +110,15 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
         ssrFormat = 'cjs';
       }
       outDir = config.build?.outDir;
+
+      // Auto-disable devSsrServer when @cloudflare/vite-plugin is present.
+      // cloudflare plugin provides its own workerd-based SSR dev server.
+      if (userOpts?.devSsrServer === undefined) {
+        const hasCloudflare = config.plugins.some((p) => p.name === 'vite-plugin-cloudflare');
+        if (hasCloudflare) {
+          userOpts = { ...userOpts, devSsrServer: false };
+        }
+      }
     },
 
     configureServer(server) {
@@ -121,6 +129,12 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
         if (!ctx.isDevServer) {
           // preview server: serve static files from the dist directory
           server.middlewares.use(staticDistMiddleware(server));
+        }
+        if (userOpts?.devSsrServer === false) {
+          // When devSsrServer is false, skip the Qwik City SSR dev middleware.
+          // This is needed when using @cloudflare/vite-plugin which provides its own
+          // workerd-based SSR dev server and handles HTTP requests itself.
+          return;
         }
         // qwik city middleware injected BEFORE vite internal middlewares
         // and BEFORE @builder.io/qwik/optimizer/vite middlewares
@@ -178,7 +192,10 @@ function qwikCityPlugin(userOpts?: QwikCityVitePluginOptions): any {
           return `export {_deserializeData, _serializeData, _verifySerializable} from '@builder.io/qwik'`;
         }
         if (isCityPlan || isSwRegister) {
-          if (!ctx.isDevServer && ctx.isDirty) {
+          if (ctx.isDirty) {
+            // Always build when dirty. In traditional dev server mode, ssrDevMiddleware also
+            // calls build(). With devSsrServer: false (Cloudflare Plugin setup), this load
+            // hook is the only place to trigger route scanning before the first request.
             await build(ctx);
 
             ctx.isDirty = false;

@@ -15,6 +15,7 @@ export async function buildQwikCity(config: BuildConfig) {
     buildVite(config),
     buildAdapterAzureSwaVite(config),
     buildAdapterCloudflarePagesVite(config),
+    buildAdapterCloudflareWorkerVite(config),
     buildAdapterCloudRunVite(config),
     buildAdapterDenoVite(config),
     buildAdapterBunVite(config),
@@ -24,6 +25,7 @@ export async function buildQwikCity(config: BuildConfig) {
     buildAdapterStaticVite(config),
     buildAdapterVercelEdgeVite(config),
     buildMiddlewareCloudflarePages(config),
+    buildMiddlewareCloudflareWorker(config),
     buildMiddlewareNetlifyEdge(config),
     buildMiddlewareAzureSwa(config),
     buildMiddlewareAwsLambda(config),
@@ -211,6 +213,34 @@ async function buildAdapterCloudflarePagesVite(config: BuildConfig) {
   await build({
     entryPoints,
     outfile: join(config.distQwikCityPkgDir, 'adapters', 'cloudflare-pages', 'vite', 'index.cjs'),
+    bundle: true,
+    platform: 'node',
+    target: nodeTarget,
+    format: 'cjs',
+    external: ADAPTER_EXTERNALS,
+    plugins: [resolveAdapterShared('../../shared/vite/index.cjs')],
+  });
+}
+
+async function buildAdapterCloudflareWorkerVite(config: BuildConfig) {
+  const entryPoints = [
+    join(config.srcQwikCityDir, 'adapters', 'cloudflare-worker', 'vite', 'index.ts'),
+  ];
+
+  await build({
+    entryPoints,
+    outfile: join(config.distQwikCityPkgDir, 'adapters', 'cloudflare-worker', 'vite', 'index.mjs'),
+    bundle: true,
+    platform: 'node',
+    target: nodeTarget,
+    format: 'esm',
+    external: ADAPTER_EXTERNALS,
+    plugins: [resolveAdapterShared('../../shared/vite/index.mjs')],
+  });
+
+  await build({
+    entryPoints,
+    outfile: join(config.distQwikCityPkgDir, 'adapters', 'cloudflare-worker', 'vite', 'index.cjs'),
     bundle: true,
     platform: 'node',
     target: nodeTarget,
@@ -479,6 +509,21 @@ async function buildMiddlewareCloudflarePages(config: BuildConfig) {
   await build({
     entryPoints,
     outfile: join(config.distQwikCityPkgDir, 'middleware', 'cloudflare-pages', 'index.mjs'),
+    bundle: true,
+    platform: 'node',
+    target: nodeTarget,
+    format: 'esm',
+    external: MIDDLEWARE_EXTERNALS,
+    plugins: [resolveRequestHandler('../request-handler/index.mjs')],
+  });
+}
+
+async function buildMiddlewareCloudflareWorker(config: BuildConfig) {
+  const entryPoints = [join(config.srcQwikCityDir, 'middleware', 'cloudflare-worker', 'index.ts')];
+
+  await build({
+    entryPoints,
+    outfile: join(config.distQwikCityPkgDir, 'middleware', 'cloudflare-worker', 'index.mjs'),
     bundle: true,
     platform: 'node',
     target: nodeTarget,

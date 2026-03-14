@@ -1,0 +1,125 @@
+---
+title: \@builder.io/qwik-city/middleware/cloudflare-worker API Reference
+---
+
+# [API](/api) &rsaquo; @builder.io/qwik-city/middleware/cloudflare-worker
+
+<h2 id="createqwikcity">createQwikCity</h2>
+
+```typescript
+export declare function createQwikCity(
+  opts: QwikCityCloudflareWorkerOptions,
+): (
+  request: Request,
+  env: PlatformCloudflareWorker["env"],
+  ctx: PlatformCloudflareWorker["ctx"],
+) => Promise<Response>;
+```
+
+<table><thead><tr><th>
+
+Parameter
+
+</th><th>
+
+Type
+
+</th><th>
+
+Description
+
+</th></tr></thead>
+<tbody><tr><td>
+
+opts
+
+</td><td>
+
+[QwikCityCloudflareWorkerOptions](#qwikcitycloudflareworkeroptions)
+
+</td><td>
+
+</td></tr>
+</tbody></table>
+
+**Returns:**
+
+(request: Request, env: [PlatformCloudflareWorker](#platformcloudflareworker)['env'], ctx: [PlatformCloudflareWorker](#platformcloudflareworker)['ctx']) =&gt; Promise&lt;Response&gt;
+
+[Edit this section](https://github.com/QwikDev/qwik/tree/main/packages/qwik-city/src/middleware/cloudflare-worker/index.ts)
+
+<h2 id="platformcloudflareworker">PlatformCloudflareWorker</h2>
+
+```typescript
+export interface PlatformCloudflareWorker
+```
+
+<table><thead><tr><th>
+
+Property
+
+</th><th>
+
+Modifiers
+
+</th><th>
+
+Type
+
+</th><th>
+
+Description
+
+</th></tr></thead>
+<tbody><tr><td>
+
+[ctx](#)
+
+</td><td>
+
+</td><td>
+
+\{ waitUntil: (promise: Promise&lt;any&gt;) =&gt; void; }
+
+</td><td>
+
+</td></tr>
+<tr><td>
+
+[env](#)
+
+</td><td>
+
+</td><td>
+
+Record&lt;string, any&gt;
+
+</td><td>
+
+</td></tr>
+<tr><td>
+
+[request](#)
+
+</td><td>
+
+</td><td>
+
+Request
+
+</td><td>
+
+</td></tr>
+</tbody></table>
+
+[Edit this section](https://github.com/QwikDev/qwik/tree/main/packages/qwik-city/src/middleware/cloudflare-worker/index.ts)
+
+<h2 id="qwikcitycloudflareworkeroptions">QwikCityCloudflareWorkerOptions</h2>
+
+```typescript
+export interface QwikCityCloudflareWorkerOptions extends ServerRenderOptions
+```
+
+**Extends:** ServerRenderOptions
+
+[Edit this section](https://github.com/QwikDev/qwik/tree/main/packages/qwik-city/src/middleware/cloudflare-worker/index.ts)

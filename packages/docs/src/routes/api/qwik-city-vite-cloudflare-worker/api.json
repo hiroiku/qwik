@@ -1,0 +1,34 @@
+{
+  "id": "qwik-city-vite-cloudflare-worker",
+  "package": "@builder.io/qwik-city/vite/cloudflare-worker",
+  "members": [
+    {
+      "name": "cloudflareWorkerAdapter",
+      "id": "cloudflareworkeradapter",
+      "hierarchy": [
+        {
+          "name": "cloudflareWorkerAdapter",
+          "id": "cloudflareworkeradapter"
+        }
+      ],
+      "kind": "Function",
+      "content": "```typescript\nexport declare function cloudflareWorkerAdapter(opts?: CloudflareWorkerAdapterOptions): any;\n```\n\n\n<table><thead><tr><th>\n\nParameter\n\n\n</th><th>\n\nType\n\n\n</th><th>\n\nDescription\n\n\n</th></tr></thead>\n<tbody><tr><td>\n\nopts\n\n\n</td><td>\n\n[CloudflareWorkerAdapterOptions](#cloudflareworkeradapteroptions)\n\n\n</td><td>\n\n_(Optional)_\n\n\n</td></tr>\n</tbody></table>\n\n**Returns:**\n\nany",
+      "editUrl": "https://github.com/QwikDev/qwik/tree/main/packages/qwik-city/src/adapters/cloudflare-worker/vite/index.ts",
+      "mdFile": "qwik-city.cloudflareworkeradapter.md"
+    },
+    {
+      "name": "CloudflareWorkerAdapterOptions",
+      "id": "cloudflareworkeradapteroptions",
+      "hierarchy": [
+        {
+          "name": "CloudflareWorkerAdapterOptions",
+          "id": "cloudflareworkeradapteroptions"
+        }
+      ],
+      "kind": "Interface",
+      "content": "```typescript\nexport interface CloudflareWorkerAdapterOptions extends ServerAdapterOptions \n```\n**Extends:** ServerAdapterOptions\n\n\n<table><thead><tr><th>\n\nProperty\n\n\n</th><th>\n\nModifiers\n\n\n</th><th>\n\nType\n\n\n</th><th>\n\nDescription\n\n\n</th></tr></thead>\n<tbody><tr><td>\n\n[staticPaths?](#)\n\n\n</td><td>\n\n\n</td><td>\n\nstring\\[\\]\n\n\n</td><td>\n\n_(Optional)_ Manually add pathnames that should be treated as static paths and not SSR. For example, when these pathnames are requested, their response should come from a static file, rather than a server-side rendered response.\n\n\n</td></tr>\n</tbody></table>",
+      "editUrl": "https://github.com/QwikDev/qwik/tree/main/packages/qwik-city/src/adapters/cloudflare-worker/vite/index.ts",
+      "mdFile": "qwik-city.cloudflareworkeradapteroptions.md"
+    }
+  ]
+}
