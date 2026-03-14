@@ -821,8 +821,16 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
 
       // Try to resolve using all other plugins + Vite's built-in resolver.
       // skipSelf prevents calling this plugin recursively.
-      const resolved = await this.resolve(id, importer, { ...options, skipSelf: true });
-      if (resolved) return null; // Resolved fine — let normal flow continue.
+      // Some plugins (e.g., commonjs--resolver) throw instead of returning null
+      // when a package has no valid export conditions for the current environment,
+      // so we catch both null return and thrown errors.
+      try {
+        const resolved = await this.resolve(id, importer, { ...options, skipSelf: true });
+        if (resolved) return null; // Resolved fine — let normal flow continue.
+      } catch {
+        // Resolution threw (e.g., no valid export conditions for browser build).
+        // Fall through to mark as external.
+      }
 
       // Cannot resolve → mark as external.
       // This handles server-only packages (e.g., @prisma/client) that have no

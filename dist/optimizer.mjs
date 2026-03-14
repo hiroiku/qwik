@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+c818b1b-20260314165125
+ * @builder.io/qwik/optimizer 1.19.0-dev+15b5e49-20260314170621
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1291,7 +1291,7 @@ var QWIK_BINDING_MAP = {
 };
 
 var versions = {
-  qwik: "1.19.0-dev+c818b1b-20260314165125"
+  qwik: "1.19.0-dev+15b5e49-20260314170621"
 };
 
 async function getSystem() {
@@ -4210,13 +4210,15 @@ function qwikVite(qwikViteOpts = {}) {
       if (!importer || id.startsWith(".") || id.startsWith("/") || id.startsWith("\0")) {
         return null;
       }
-      const resolved = await this.resolve(id, importer, {
-        ...options,
-        skipSelf: true
-      });
-      if (resolved) {
-        return null;
-      }
+      try {
+        const resolved = await this.resolve(id, importer, {
+          ...options,
+          skipSelf: true
+        });
+        if (resolved) {
+          return null;
+        }
+      } catch {}
       return {
         id: id,
         external: true
