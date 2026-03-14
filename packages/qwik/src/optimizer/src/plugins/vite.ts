@@ -473,6 +473,23 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
       if (!('devSsrServer' in qwikViteOpts) && hasCloudflarePlugin) {
         (qwikViteOpts as any).devSsrServer = false;
       }
+
+      if (hasCloudflarePlugin) {
+        // Disable esbuild dependency discovery for the SSR/Worker environment.
+        // @cloudflare/vite-plugin sets noDiscovery: false, but pre-bundling causes:
+        // - Edge runtime detection errors (e.g., @prisma/client PrismaClientValidationError)
+        // - Module-scoped Symbol identity breaks on reload (e.g., katagami INTERNALS mismatch)
+        // With noDiscovery: true, modules are loaded through Vite's transform pipeline
+        // which handles CJS→ESM conversion and respects workerd export conditions.
+        // configResolved runs after all plugins' config hooks, so this overrides the
+        // cloudflare plugin's noDiscovery: false setting.
+        const ssrEnvConfig = (config as any).environments?.ssr;
+        if (ssrEnvConfig?.optimizeDeps) {
+          ssrEnvConfig.optimizeDeps.noDiscovery = true;
+          ssrEnvConfig.optimizeDeps.include = [];
+        }
+      }
+
       // Ensure that the final settings are applied
       qwikPlugin.normalizeOptions(qwikViteOpts);
     },
@@ -784,7 +801,38 @@ export function qwikVite(qwikViteOpts: QwikVitePluginOptions = {}): any {
     },
   } as const satisfies VitePlugin<QwikVitePluginApi>;
 
-  return [vitePluginPre, vitePluginPost];
+  // Fallback resolver for the client environment when @cloudflare/vite-plugin is present.
+  // Marks bare specifiers that cannot be resolved (server-only packages) as external,
+  // preventing build failures while Qwik's QRL tree-shaking ensures they are excluded
+  // from the final client bundle.
+  const vitePluginClientFallback: VitePlugin<never> = {
+    name: 'vite-plugin-qwik-client-fallback',
+
+    async resolveId(id, importer, options) {
+      // Only activate for the client environment when cloudflare plugin is present.
+      const envName = (this as any).environment?.name;
+      if (!hasCloudflarePlugin || envName !== 'client') return null;
+
+      // Only handle bare specifiers (npm packages) imported from other modules.
+      // Skip entry points (no importer), relative paths, absolute paths, virtual modules.
+      if (!importer || id.startsWith('.') || id.startsWith('/') || id.startsWith('\0')) {
+        return null;
+      }
+
+      // Try to resolve using all other plugins + Vite's built-in resolver.
+      // skipSelf prevents calling this plugin recursively.
+      const resolved = await this.resolve(id, importer, { ...options, skipSelf: true });
+      if (resolved) return null; // Resolved fine — let normal flow continue.
+
+      // Cannot resolve → mark as external.
+      // This handles server-only packages (e.g., @prisma/client) that have no
+      // browser-compatible exports. Qwik's optimizer strips server code via _noopQrl
+      // replacement, so these externals are removed by tree-shaking.
+      return { id, external: true };
+    },
+  } as const satisfies VitePlugin<never>;
+
+  return [vitePluginPre, vitePluginPost, vitePluginClientFallback];
 }
 
 const ANSI_COLOR = {
