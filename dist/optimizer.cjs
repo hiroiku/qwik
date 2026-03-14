@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+75e6fdb-20260314045250
+ * @builder.io/qwik/optimizer 1.19.0-dev+c818b1b-20260314165125
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1266,7 +1266,7 @@ globalThis.qwikOptimizer = function(module) {
     }
   };
   var versions = {
-    qwik: "1.19.0-dev+75e6fdb-20260314045250"
+    qwik: "1.19.0-dev+c818b1b-20260314165125"
   };
   async function getSystem() {
     const sysEnv = getEnv();
@@ -3862,7 +3862,7 @@ globalThis.qwikOptimizer = function(module) {
         return updatedViteConfig;
       },
       async configResolved(config) {
-        var _a;
+        var _a, _b;
         basePathname = config.base;
         if (!(basePathname.startsWith("/") && basePathname.endsWith("/"))) {
           console.error("warning: vite's config.base must begin and end with /. This will be an error in v2. If you have a valid use case, please open an issue.");
@@ -3871,6 +3871,13 @@ globalThis.qwikOptimizer = function(module) {
         const useSourcemap = !!config.build.sourcemap;
         useSourcemap && void 0 === (null == (_a = qwikViteOpts.optimizerOptions) ? void 0 : _a.sourcemap) && qwikPlugin.setSourceMapSupport(true);
         !("devSsrServer" in qwikViteOpts) && hasCloudflarePlugin && (qwikViteOpts.devSsrServer = false);
+        if (hasCloudflarePlugin) {
+          const ssrEnvConfig = null == (_b = config.environments) ? void 0 : _b.ssr;
+          if (null == ssrEnvConfig ? void 0 : ssrEnvConfig.optimizeDeps) {
+            ssrEnvConfig.optimizeDeps.noDiscovery = true;
+            ssrEnvConfig.optimizeDeps.include = [];
+          }
+        }
         qwikPlugin.normalizeOptions(qwikViteOpts);
       },
       async buildStart() {
@@ -4069,7 +4076,31 @@ globalThis.qwikOptimizer = function(module) {
         }
       }
     };
-    return [ vitePluginPre, vitePluginPost ];
+    const vitePluginClientFallback = {
+      name: "vite-plugin-qwik-client-fallback",
+      async resolveId(id, importer, options) {
+        var _a;
+        const envName = null == (_a = this.environment) ? void 0 : _a.name;
+        if (!hasCloudflarePlugin || "client" !== envName) {
+          return null;
+        }
+        if (!importer || id.startsWith(".") || id.startsWith("/") || id.startsWith("\0")) {
+          return null;
+        }
+        const resolved = await this.resolve(id, importer, {
+          ...options,
+          skipSelf: true
+        });
+        if (resolved) {
+          return null;
+        }
+        return {
+          id: id,
+          external: true
+        };
+      }
+    };
+    return [ vitePluginPre, vitePluginPost, vitePluginClientFallback ];
   }
   var ANSI_COLOR = {
     Black: "[30m",

@@ -1,6 +1,6 @@
 /**
  * @license
- * @builder.io/qwik/optimizer 1.19.0-dev+75e6fdb-20260314045250
+ * @builder.io/qwik/optimizer 1.19.0-dev+c818b1b-20260314165125
  * Copyright Builder.io, Inc. All Rights Reserved.
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/QwikDev/qwik/blob/main/LICENSE
@@ -1291,7 +1291,7 @@ var QWIK_BINDING_MAP = {
 };
 
 var versions = {
-  qwik: "1.19.0-dev+75e6fdb-20260314045250"
+  qwik: "1.19.0-dev+c818b1b-20260314165125"
 };
 
 async function getSystem() {
@@ -3998,6 +3998,13 @@ function qwikVite(qwikViteOpts = {}) {
       const useSourcemap = !!config.build.sourcemap;
       useSourcemap && void 0 === qwikViteOpts.optimizerOptions?.sourcemap && qwikPlugin.setSourceMapSupport(true);
       !("devSsrServer" in qwikViteOpts) && hasCloudflarePlugin && (qwikViteOpts.devSsrServer = false);
+      if (hasCloudflarePlugin) {
+        const ssrEnvConfig = config.environments?.ssr;
+        if (ssrEnvConfig?.optimizeDeps) {
+          ssrEnvConfig.optimizeDeps.noDiscovery = true;
+          ssrEnvConfig.optimizeDeps.include = [];
+        }
+      }
       qwikPlugin.normalizeOptions(qwikViteOpts);
     },
     async buildStart() {
@@ -4193,7 +4200,30 @@ function qwikVite(qwikViteOpts = {}) {
       }
     }
   };
-  return [ vitePluginPre, vitePluginPost ];
+  const vitePluginClientFallback = {
+    name: "vite-plugin-qwik-client-fallback",
+    async resolveId(id, importer, options) {
+      const envName = this.environment?.name;
+      if (!hasCloudflarePlugin || "client" !== envName) {
+        return null;
+      }
+      if (!importer || id.startsWith(".") || id.startsWith("/") || id.startsWith("\0")) {
+        return null;
+      }
+      const resolved = await this.resolve(id, importer, {
+        ...options,
+        skipSelf: true
+      });
+      if (resolved) {
+        return null;
+      }
+      return {
+        id: id,
+        external: true
+      };
+    }
+  };
+  return [ vitePluginPre, vitePluginPost, vitePluginClientFallback ];
 }
 
 var ANSI_COLOR = {
